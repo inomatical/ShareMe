@@ -1,0 +1,14 @@
+## .NET build output
+bin/
+obj/
+*.user
+
+## Test results
+TestResults/
+*.trx
+coverage*.xml
+
+## IDE / tooling
+.vs/
+.vscode/
+*.suo
