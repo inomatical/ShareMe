@@ -7,4 +7,6 @@ public sealed record InboxItem(
 	DateTimeOffset ReceivedAt,
 	string? OriginalFileName = null,
 	string? MimeType = null,
-	string? StoredFileName = null);
+	string? StoredFileName = null,
+	long? Size = null,
+	string? LocalPath = null);

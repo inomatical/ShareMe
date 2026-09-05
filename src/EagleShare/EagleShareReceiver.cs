@@ -74,6 +74,15 @@ public sealed class EagleShareReceiver : IAsyncDisposable
                     imageStream,
                     bytesReceived => ImageProgress?.Invoke(this, new IncomingTransferProgress(bytesReceived, image.Length)));
             }
+            else if (kind == "file" && form["content"].Count == 0 && form.Files.Count == 1)
+            {
+                var file = form.Files[0];
+                using var fileStream = file.OpenReadStream();
+                item = _storage.SaveFile(
+                    file.FileName,
+                    string.IsNullOrWhiteSpace(file.ContentType) ? null : file.ContentType,
+                    fileStream);
+            }
             else if (form["content"].Count == 1)
             {
                 var content = form["content"].ToString();
@@ -91,7 +100,7 @@ public sealed class EagleShareReceiver : IAsyncDisposable
 
             if (item is null)
             {
-                return Results.BadRequest("A valid text, absolute URL, or single image file is required.");
+                return Results.BadRequest("A valid text, absolute URL, image, or single file is required.");
             }
 
             ItemReceived?.Invoke(this, item);

@@ -104,6 +104,39 @@ public sealed class EagleShareStorageTests : IDisposable
         Assert.Equal(imageBytes, File.ReadAllBytes(Path.Combine(storage.InboxPath, item.StoredFileName!)));
     }
 
+    [Fact]
+    public void SaveFile_StreamsToInboxAndRecordsFileMetadata()
+    {
+        var storage = new EagleShareStorage(_temporaryRoot);
+        var fileBytes = new byte[] { 1, 2, 3, 4 };
+
+        using var file = new MemoryStream(fileBytes);
+        var item = storage.SaveFile("report.pdf", "application/pdf", file);
+
+        Assert.Equal("file", item.Kind);
+        Assert.Equal("report.pdf", item.OriginalFileName);
+        Assert.Equal("application/pdf", item.MimeType);
+        Assert.Equal(fileBytes.Length, item.Size);
+        Assert.Equal(Path.Combine(storage.InboxPath, item.StoredFileName!), item.LocalPath);
+        Assert.Equal(fileBytes, File.ReadAllBytes(item.LocalPath!));
+        Assert.Empty(Directory.EnumerateFiles(storage.IncomingPath));
+    }
+
+    [Fact]
+    public void SaveFile_WithEqualOriginalNames_StoresDistinctContent()
+    {
+        var storage = new EagleShareStorage(_temporaryRoot);
+        using var firstFile = new MemoryStream([1]);
+        using var secondFile = new MemoryStream([2]);
+
+        var firstItem = storage.SaveFile("report.pdf", "application/pdf", firstFile);
+        var secondItem = storage.SaveFile("report.pdf", "application/pdf", secondFile);
+
+        Assert.NotEqual(firstItem.StoredFileName, secondItem.StoredFileName);
+        Assert.Equal(new byte[] { 1 }, File.ReadAllBytes(firstItem.LocalPath!));
+        Assert.Equal(new byte[] { 2 }, File.ReadAllBytes(secondItem.LocalPath!));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_temporaryRoot))

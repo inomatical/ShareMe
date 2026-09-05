@@ -82,6 +82,26 @@ public sealed class EagleShareReceiverContractTests
         Assert.Equal(imageBytes, File.ReadAllBytes(Path.Combine(harness.Storage.InboxPath, item.StoredFileName!)));
         Assert.Empty(Directory.EnumerateFiles(harness.Storage.IncomingPath));
     }
+
+    [Fact]
+    public async Task MultipartPost_WithFile_ReturnsSuccessAfterFileIsDurableWithMetadata()
+    {
+        await using var harness = await EagleShareReceiverContractHarness.StartAsync();
+        var fileBytes = new byte[] { 1, 2, 3, 4 };
+
+        var response = await harness.PostFileAsync("report.pdf", "application/pdf", fileBytes);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var item = JsonSerializer.Deserialize<InboxItem>(response.Body, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        Assert.NotNull(item);
+        Assert.Equal("file", item.Kind);
+        Assert.Equal("report.pdf", item.OriginalFileName);
+        Assert.Equal("application/pdf", item.MimeType);
+        Assert.Equal(fileBytes.Length, item.Size);
+        Assert.Equal(Path.Combine(harness.Storage.InboxPath, item.StoredFileName!), item.LocalPath);
+        Assert.Equal(fileBytes, File.ReadAllBytes(item.LocalPath!));
+        Assert.Empty(Directory.EnumerateFiles(harness.Storage.IncomingPath));
+    }
 }
 
 internal sealed class EagleShareReceiverContractHarness : IAsyncDisposable
@@ -139,6 +159,18 @@ internal sealed class EagleShareReceiverContractHarness : IAsyncDisposable
         var image = new ByteArrayContent(content);
         image.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType);
         form.Add(image, "file", fileName);
+
+        using var response = await _client.PostAsync("api/items", form);
+        return new TransferHttpResponse(response.StatusCode, await response.Content.ReadAsStringAsync());
+    }
+
+    public async Task<TransferHttpResponse> PostFileAsync(string fileName, string mimeType, byte[] content)
+    {
+        using var form = new MultipartFormDataContent();
+        form.Add(new StringContent("file", Encoding.UTF8), "kind");
+        var file = new ByteArrayContent(content);
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType);
+        form.Add(file, "file", fileName);
 
         using var response = await _client.PostAsync("api/items", form);
         return new TransferHttpResponse(response.StatusCode, await response.Content.ReadAsStringAsync());

@@ -6,6 +6,6 @@
 
 **Status:** ready-for-agent
 
-- [ ] File data is streamed and finalized before it appears as an inbox item.
-- [ ] The completed item records original filename, available MIME type, local path, and size.
-- [ ] Equal original filenames never overwrite each other's stored content.
+- [x] File data is streamed and finalized before it appears as an inbox item.
+- [x] The completed item records original filename, available MIME type, local path, and size.
+- [x] Equal original filenames never overwrite each other's stored content.

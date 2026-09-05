@@ -80,6 +80,25 @@ public sealed class EagleShareStorage
         Stream content,
         Action<long>? progress = null)
     {
+        return SaveBinaryItem("image", originalFileName, mimeType, content, progress);
+    }
+
+    public InboxItem SaveFile(
+        string originalFileName,
+        string? mimeType,
+        Stream content,
+        Action<long>? progress = null)
+    {
+        return SaveBinaryItem("file", originalFileName, mimeType, content, progress);
+    }
+
+    private InboxItem SaveBinaryItem(
+        string kind,
+        string originalFileName,
+        string? mimeType,
+        Stream content,
+        Action<long>? progress)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(originalFileName);
         ArgumentNullException.ThrowIfNull(content);
 
@@ -97,6 +116,7 @@ public sealed class EagleShareStorage
             var storedFileName = $"{itemId}{extension}";
             var incomingPath = Path.Combine(IncomingPath, $"{itemId}.upload");
             var finalPath = Path.Combine(InboxPath, storedFileName);
+            long bytesWritten = 0;
 
             try
             {
@@ -109,7 +129,6 @@ public sealed class EagleShareStorage
                            FileOptions.WriteThrough))
                 {
                     var buffer = new byte[81920];
-                    long bytesWritten = 0;
                     int bytesRead;
                     while ((bytesRead = content.Read(buffer, 0, buffer.Length)) > 0)
                     {
@@ -124,12 +143,14 @@ public sealed class EagleShareStorage
                 File.Move(incomingPath, finalPath);
                 var item = new InboxItem(
                     itemId,
-                    "image",
+                    kind,
                     safeFileName,
                     DateTimeOffset.UtcNow,
                     safeFileName,
                     mimeType,
-                    storedFileName);
+                    storedFileName,
+                    bytesWritten,
+                    finalPath);
                 AppendToMetadata(item);
                 return item;
             }
