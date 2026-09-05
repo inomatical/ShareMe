@@ -137,6 +137,21 @@ public sealed class EagleShareStorageTests : IDisposable
         Assert.Equal(new byte[] { 2 }, File.ReadAllBytes(secondItem.LocalPath!));
     }
 
+    [Fact]
+    public void CopyFileTo_CreatesCopyWithoutRemovingInboxFile()
+    {
+        var storage = new EagleShareStorage(_temporaryRoot);
+        var fileBytes = new byte[] { 1, 2, 3, 4 };
+        var destinationPath = Path.Combine(_temporaryRoot, "saved-report.pdf");
+        using var file = new MemoryStream(fileBytes);
+        var item = storage.SaveFile("report.pdf", "application/pdf", file);
+
+        storage.CopyFileTo(item, destinationPath);
+
+        Assert.Equal(fileBytes, File.ReadAllBytes(destinationPath));
+        Assert.Equal(fileBytes, File.ReadAllBytes(item.LocalPath!));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_temporaryRoot))

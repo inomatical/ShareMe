@@ -72,6 +72,15 @@
                         Visibility="Collapsed"
                         IsEnabled="False"
                         Click="SaveImageButton_Click"/>
+                    <Button x:Name="SaveFileButton"
+                        DockPanel.Dock="Bottom"
+                        Content="Save As..."
+                        Margin="0,8,0,0"
+                        Padding="12,6"
+                        HorizontalAlignment="Right"
+                        Visibility="Collapsed"
+                        IsEnabled="False"
+                        Click="SaveFileButton_Click"/>
                 <Border BorderThickness="1" BorderBrush="#E5E7EB">
                     <Grid>
                         <TextBox x:Name="PreviewText"
@@ -95,6 +104,18 @@
                                        HorizontalAlignment="Center"/>
                             </StackPanel>
                         </ScrollViewer>
+                        <StackPanel x:Name="FilePreview"
+                                    Margin="12"
+                                    Visibility="Collapsed">
+                            <TextBlock x:Name="FileNameText"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock x:Name="FileTypeText"
+                                       Margin="0,12,0,0"/>
+                            <TextBlock x:Name="FileSizeText"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
                     </Grid>
                 </Border>
             </DockPanel>

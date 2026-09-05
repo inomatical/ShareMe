@@ -76,19 +76,34 @@ public partial class MainWindow : Window
     {
         var selectedItem = InboxList.SelectedItem as InboxItem;
         var isImage = selectedItem?.Kind == "image";
+        var isFile = selectedItem?.Kind == "file";
+        var isBinaryItem = isImage || isFile;
 
-        CopyButton.Visibility = isImage ? Visibility.Collapsed : Visibility.Visible;
-        CopyButton.IsEnabled = selectedItem is not null && !isImage;
+        CopyButton.Visibility = isBinaryItem ? Visibility.Collapsed : Visibility.Visible;
+        CopyButton.IsEnabled = selectedItem is not null && !isBinaryItem;
         SaveImageButton.Visibility = isImage ? Visibility.Visible : Visibility.Collapsed;
         SaveImageButton.IsEnabled = isImage;
-        PreviewText.Visibility = isImage ? Visibility.Collapsed : Visibility.Visible;
+        SaveFileButton.Visibility = isFile ? Visibility.Visible : Visibility.Collapsed;
+        SaveFileButton.IsEnabled = isFile;
+        PreviewText.Visibility = isBinaryItem ? Visibility.Collapsed : Visibility.Visible;
         ImagePreview.Visibility = isImage ? Visibility.Visible : Visibility.Collapsed;
+        FilePreview.Visibility = isFile ? Visibility.Visible : Visibility.Collapsed;
 
-        if (!isImage)
+        if (!isBinaryItem)
         {
             PreviewText.Text = selectedItem?.Content ?? string.Empty;
             ThumbnailImage.Source = null;
             FullPreviewImage.Source = null;
+            return;
+        }
+
+        if (isFile)
+        {
+            ThumbnailImage.Source = null;
+            FullPreviewImage.Source = null;
+            FileNameText.Text = selectedItem!.OriginalFileName ?? selectedItem.Content;
+            FileTypeText.Text = $"Type: {selectedItem.MimeType ?? "Unknown"}";
+            FileSizeText.Text = $"Size: {FormatFileSize(selectedItem.Size)}";
             return;
         }
 
@@ -147,6 +162,39 @@ public partial class MainWindow : Window
             StatusText.Text = $"Image could not be saved: {exception.Message}";
         }
     }
+
+    private void SaveFileButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (InboxList.SelectedItem is not InboxItem selectedItem || selectedItem.Kind != "file")
+        {
+            return;
+        }
+
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            FileName = selectedItem.OriginalFileName ?? selectedItem.Content,
+            Filter = "All files|*.*",
+            OverwritePrompt = true,
+        };
+
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        try
+        {
+            _storage.CopyFileTo(selectedItem, dialog.FileName, overwrite: true);
+            StatusText.Text = $"File saved to {dialog.FileName}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text = $"File could not be saved: {exception.Message}";
+        }
+    }
+
+    private static string FormatFileSize(long? size) =>
+        size is null ? "Unknown" : $"{size.Value:N0} bytes";
 
     private BitmapImage LoadImage(InboxItem item)
     {

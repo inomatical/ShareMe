@@ -6,5 +6,5 @@
 
 **Status:** ready-for-agent
 
-- [ ] The selected file preview shows its filename, type, and size.
-- [ ] Save As creates a user-selected copy without deleting the durable inbox copy.
+- [x] The selected file preview shows its filename, type, and size.
+- [x] Save As creates a user-selected copy without deleting the durable inbox copy.

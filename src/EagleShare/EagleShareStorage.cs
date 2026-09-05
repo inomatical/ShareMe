@@ -166,12 +166,22 @@ public sealed class EagleShareStorage
 
     public void CopyImageTo(InboxItem item, string destinationPath, bool overwrite = false)
     {
+        CopyBinaryItemTo(item, "image", destinationPath, overwrite);
+    }
+
+    public void CopyFileTo(InboxItem item, string destinationPath, bool overwrite = false)
+    {
+        CopyBinaryItemTo(item, "file", destinationPath, overwrite);
+    }
+
+    private void CopyBinaryItemTo(InboxItem item, string expectedKind, string destinationPath, bool overwrite)
+    {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
 
-        if (item.Kind != "image" || string.IsNullOrWhiteSpace(item.StoredFileName))
+        if (item.Kind != expectedKind || string.IsNullOrWhiteSpace(item.StoredFileName))
         {
-            throw new ArgumentException("Only persisted image inbox items can be copied.", nameof(item));
+            throw new ArgumentException($"Only persisted {expectedKind} inbox items can be copied.", nameof(item));
         }
 
         var storedFileName = Path.GetFileName(item.StoredFileName);
@@ -183,7 +193,7 @@ public sealed class EagleShareStorage
         var sourcePath = Path.Combine(InboxPath, storedFileName);
         if (!File.Exists(sourcePath))
         {
-            throw new FileNotFoundException("The received image is no longer available.", sourcePath);
+            throw new FileNotFoundException($"The received {expectedKind} is no longer available.", sourcePath);
         }
 
         File.Copy(sourcePath, destinationPath, overwrite);
