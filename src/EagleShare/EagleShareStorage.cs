@@ -140,6 +140,35 @@ public sealed class EagleShareStorage
         }
     }
 
+    public bool DeleteBinaryItem(InboxItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        if (item.Kind is not ("image" or "file"))
+        {
+            throw new ArgumentException("Only image and file inbox items can be deleted.", nameof(item));
+        }
+
+        lock (_inboxLock)
+        {
+            Initialize();
+            var items = JsonSerializer.Deserialize<List<InboxItem>>(File.ReadAllText(InboxMetadataPath)) ?? [];
+            var removedCount = items.RemoveAll(storedItem => storedItem.Id == item.Id && storedItem.Kind == item.Kind);
+            if (removedCount != 1)
+            {
+                return false;
+            }
+
+            if (!TryGetCompletedContentPath(item, out var contentPath))
+            {
+                throw new InvalidOperationException("The inbox item's stored binary content is invalid.");
+            }
+
+            File.Delete(contentPath);
+            WriteDurableFile(InboxMetadataPath, JsonSerializer.SerializeToUtf8Bytes(items));
+            return true;
+        }
+    }
+
     public InboxItem SaveImage(
         string originalFileName,
         string? mimeType,

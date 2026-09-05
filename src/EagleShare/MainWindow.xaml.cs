@@ -84,7 +84,7 @@ public partial class MainWindow : Window
         var isImage = selectedItem?.Kind == "image";
         var isFile = selectedItem?.Kind == "file";
         var isBinaryItem = isImage || isFile;
-        var canDelete = selectedItem?.Kind is "text" or "url";
+        var canDelete = selectedItem?.Kind is "text" or "url" or "image" or "file";
 
         CopyButton.Visibility = isBinaryItem ? Visibility.Collapsed : Visibility.Visible;
         CopyButton.IsEnabled = selectedItem is not null && !isBinaryItem;
@@ -144,7 +144,7 @@ public partial class MainWindow : Window
 
     private void DeleteButton_Click(object sender, RoutedEventArgs e)
     {
-        if (InboxList.SelectedItem is not InboxItem selectedItem || selectedItem.Kind is not ("text" or "url"))
+        if (InboxList.SelectedItem is not InboxItem selectedItem || selectedItem.Kind is not ("text" or "url" or "image" or "file"))
         {
             return;
         }
@@ -162,7 +162,10 @@ public partial class MainWindow : Window
 
         try
         {
-            if (_storage.DeleteTextOrUrl(selectedItem))
+            var deleted = selectedItem.Kind is "text" or "url"
+                ? _storage.DeleteTextOrUrl(selectedItem)
+                : _storage.DeleteBinaryItem(selectedItem);
+            if (deleted)
             {
                 _inboxItems.Remove(selectedItem);
                 StatusText.Text = $"{selectedItem.Kind} item deleted.";

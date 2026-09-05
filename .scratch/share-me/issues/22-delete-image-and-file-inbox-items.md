@@ -6,6 +6,6 @@
 
 **Status:** ready-for-agent
 
-- [ ] Delete requires explicit confirmation for image and file items.
-- [ ] Confirmed deletion removes the item metadata and associated stored binary content.
-- [ ] Other received items remain intact; EagleShare performs no automatic cleanup.
+- [x] Delete requires explicit confirmation for image and file items.
+- [x] Confirmed deletion removes the item metadata and associated stored binary content.
+- [x] Other received items remain intact; EagleShare performs no automatic cleanup.

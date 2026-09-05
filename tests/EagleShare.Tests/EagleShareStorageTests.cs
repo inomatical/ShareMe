@@ -203,6 +203,31 @@ public sealed class EagleShareStorageTests : IDisposable
         Assert.True(File.Exists(fileItem.LocalPath));
     }
 
+    [Fact]
+    public void DeleteBinaryItem_RemovesOnlySelectedImageAndFileContentAndMetadata()
+    {
+        var storage = new EagleShareStorage(_temporaryRoot);
+        var textItem = storage.SaveText("Keep me");
+        var urlItem = storage.SaveUrl("https://example.com/keep");
+        using var image = new MemoryStream([137, 80, 78, 71]);
+        using var file = new MemoryStream([1, 2, 3, 4]);
+        var imageItem = storage.SaveImage("photo.png", "image/png", image);
+        var fileItem = storage.SaveFile("report.pdf", "application/pdf", file);
+
+        var imageDeleted = storage.DeleteBinaryItem(imageItem);
+        var fileDeleted = storage.DeleteBinaryItem(fileItem);
+
+        Assert.True(imageDeleted);
+        Assert.True(fileDeleted);
+        Assert.False(File.Exists(imageItem.LocalPath));
+        Assert.False(File.Exists(fileItem.LocalPath));
+        var restoredItems = storage.LoadInbox();
+        Assert.DoesNotContain(restoredItems, item => item.Id == imageItem.Id);
+        Assert.DoesNotContain(restoredItems, item => item.Id == fileItem.Id);
+        Assert.Contains(restoredItems, item => item.Id == textItem.Id);
+        Assert.Contains(restoredItems, item => item.Id == urlItem.Id);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_temporaryRoot))
