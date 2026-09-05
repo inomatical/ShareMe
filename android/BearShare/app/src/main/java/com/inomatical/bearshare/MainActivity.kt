@@ -1,6 +1,7 @@
 package com.inomatical.bearshare
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
 import android.view.ViewGroup
@@ -13,6 +14,22 @@ import android.widget.Toast
 class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (!handleSharedText(intent)) {
+            showTargetConfiguration()
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        if (!handleSharedText(intent)) {
+            showTargetConfiguration()
+        }
+    }
+
+    private fun showTargetConfiguration() {
 
         val targetPreferences = TargetPreferences(this)
         val currentTarget = targetPreferences.load()
@@ -61,6 +78,46 @@ class MainActivity : Activity() {
                 }, fullWidthLayoutParams())
             },
         )
+    }
+
+    private fun handleSharedText(intent: Intent): Boolean {
+        val text = ShareIntentContract.plainText(
+            intent.action,
+            intent.type,
+            intent.getCharSequenceExtra(Intent.EXTRA_TEXT),
+        ) ?: return false
+
+        val contentPadding = (24 * resources.displayMetrics.density).toInt()
+        val statusText = TextView(this).apply {
+            textSize = 18f
+            setText("Sending text to EagleShare...")
+        }
+        setContentView(
+            LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(contentPadding, contentPadding, contentPadding, contentPadding)
+                addView(TextView(this@MainActivity).apply {
+                    textSize = 22f
+                    setText("BearShare")
+                })
+                addView(statusText, fullWidthLayoutParams())
+            },
+        )
+
+        val target = TargetPreferences(this).load()
+        if (target == null) {
+            statusText.setText("Delivery failed: configure an EagleShare target first.")
+            return true
+        }
+
+        Thread {
+            val status = when (val result = TextShareDelivery.send(target, text)) {
+                TextDeliveryResult.Success -> "Text delivered to EagleShare."
+                is TextDeliveryResult.Failure -> "Delivery failed: ${result.message}"
+            }
+            runOnUiThread { statusText.text = status }
+        }.start()
+        return true
     }
 
     private fun fullWidthLayoutParams() = LinearLayout.LayoutParams(

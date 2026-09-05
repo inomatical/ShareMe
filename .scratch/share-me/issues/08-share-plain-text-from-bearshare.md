@@ -4,8 +4,10 @@
 
 **Blocked by:** 05 — Establish BearShare target configuration; 07 — Receive and copy text in EagleShare.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Android's standard share sheet offers BearShare for plain text.
-- [ ] A configured target receives the shared text as a selected EagleShare inbox item.
-- [ ] An unreachable target produces a clear failed delivery status.
+- [x] Android's standard share sheet offers BearShare for plain text.
+- [x] A configured target receives the shared text as a selected EagleShare inbox item.
+- [x] An unreachable target produces a clear failed delivery status.
+
+**Verification:** `android\BearShare\gradlew.bat -p android\BearShare testDebugUnitTest`

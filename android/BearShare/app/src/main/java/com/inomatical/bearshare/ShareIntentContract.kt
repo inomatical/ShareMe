@@ -6,4 +6,11 @@ internal object ShareIntentContract {
 
     fun accepts(action: String?, mimeType: String?): Boolean =
         action in setOf(SendAction, SendMultipleAction) && !mimeType.isNullOrBlank()
+
+    fun plainText(action: String?, mimeType: String?, content: CharSequence?): String? =
+        if (action == SendAction && mimeType == "text/plain" && content != null) {
+            content.toString()
+        } else {
+            null
+        }
 }
