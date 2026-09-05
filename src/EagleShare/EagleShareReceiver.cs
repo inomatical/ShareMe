@@ -16,21 +16,30 @@ public sealed class EagleShareReceiver : IAsyncDisposable
 {
     public const int DefaultPort = 61432;
 
+    private readonly EagleShareStorage _storage;
     private WebApplication? _application;
 
     public EagleShareReceiver(int port = DefaultPort)
+        : this(EagleShareStorage.CreateDefault(), port)
+    {
+    }
+
+    public EagleShareReceiver(EagleShareStorage storage, int port = DefaultPort)
     {
         if (port is < IPEndPoint.MinPort or > IPEndPoint.MaxPort)
         {
             throw new ArgumentOutOfRangeException(nameof(port));
         }
 
+        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
         Port = port;
     }
 
     public int Port { get; }
 
     public bool IsRunning => _application is not null;
+
+    public event EventHandler<InboxItem>? TextReceived;
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -43,6 +52,23 @@ public sealed class EagleShareReceiver : IAsyncDisposable
         builder.WebHost.UseKestrel(options => options.ListenAnyIP(Port));
 
         var application = builder.Build();
+        application.MapPost("/api/items", async (HttpRequest request, CancellationToken cancellationToken) =>
+        {
+            if (!request.HasFormContentType)
+            {
+                return Results.BadRequest("A multipart form is required.");
+            }
+
+            var form = await request.ReadFormAsync(cancellationToken);
+            if (!string.Equals(form["kind"], "text", StringComparison.Ordinal) || form["content"].Count != 1)
+            {
+                return Results.BadRequest("A single text content field is required.");
+            }
+
+            var item = _storage.SaveText(form["content"].ToString());
+            TextReceived?.Invoke(this, item);
+            return Results.Created($"/api/items/{item.Id}", item);
+        });
         application.MapFallback(() => Results.NotFound());
 
         try

@@ -39,7 +39,9 @@
                            FontSize="14" FontWeight="SemiBold"
                            Margin="0,0,0,8"/>
                 <ListBox x:Name="InboxList"
-                         BorderThickness="1" BorderBrush="#E5E7EB"/>
+                         BorderThickness="1" BorderBrush="#E5E7EB"
+                         DisplayMemberPath="Content"
+                         SelectionChanged="InboxList_SelectionChanged"/>
             </DockPanel>
 
             <GridSplitter Grid.Column="1"
@@ -53,12 +55,21 @@
                            Text="Preview"
                            FontSize="14" FontWeight="SemiBold"
                            Margin="0,0,0,8"/>
+                <Button x:Name="CopyButton"
+                        DockPanel.Dock="Bottom"
+                        Content="Copy"
+                        Margin="0,8,0,0"
+                        Padding="12,6"
+                        HorizontalAlignment="Right"
+                        IsEnabled="False"
+                        Click="CopyButton_Click"/>
                 <Border BorderThickness="1" BorderBrush="#E5E7EB">
-                    <TextBlock x:Name="PreviewPlaceholder"
-                               Text="Select an item to preview it."
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Foreground="#9CA3AF"/>
+                    <TextBox x:Name="PreviewText"
+                             BorderThickness="0"
+                             IsReadOnly="True"
+                             Padding="12"
+                             TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"/>
                 </Border>
             </DockPanel>
         </Grid>

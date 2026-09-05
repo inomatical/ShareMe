@@ -4,8 +4,10 @@
 
 **Blocked by:** 03 — Establish EagleShare local storage; 04 — Establish EagleShare receiver lifecycle; 06 — Establish transfer contract test harness.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A valid text request produces one durable, selected text inbox item only after persistence completes.
-- [ ] The selected item previews and copies the literal received UTF-8 text.
-- [ ] The receiver returns success only after the completed item is durable.
+- [x] A valid text request produces one durable, selected text inbox item only after persistence completes.
+- [x] The selected item previews and copies the literal received UTF-8 text.
+- [x] The receiver returns success only after the completed item is durable.
+
+**Verification:** `dotnet test ShareMe.slnx`
