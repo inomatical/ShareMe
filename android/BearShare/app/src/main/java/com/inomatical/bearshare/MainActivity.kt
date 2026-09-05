@@ -18,7 +18,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
 
         if (!handleSharedText(intent) && !handleSharedImage(intent) && !handleSharedFile(intent) && !handleSharedFiles(intent)) {
-            showTargetConfiguration()
+            showFailedOutgoingOrTargetConfiguration()
         }
     }
 
@@ -27,7 +27,7 @@ class MainActivity : Activity() {
         setIntent(intent)
 
         if (!handleSharedText(intent) && !handleSharedImage(intent) && !handleSharedFile(intent) && !handleSharedFiles(intent)) {
-            showTargetConfiguration()
+            showFailedOutgoingOrTargetConfiguration()
         }
     }
 
@@ -89,8 +89,21 @@ class MainActivity : Activity() {
             intent.getCharSequenceExtra(Intent.EXTRA_TEXT),
         ) ?: return false
         val itemKind = ShareIntentContract.itemKind(text)
-        val itemLabel = if (itemKind == "url") "URL" else "Text"
+        sendOutgoingText(FailedOutgoingItem(itemKind, text))
+        return true
+    }
 
+    private fun showFailedOutgoingOrTargetConfiguration() {
+        val item = FailedOutgoingPreferences(this).load()
+        if (item == null) {
+            showTargetConfiguration()
+        } else {
+            showFailedOutgoing(item, "Previous delivery failed.")
+        }
+    }
+
+    private fun sendOutgoingText(item: FailedOutgoingItem) {
+        val itemLabel = if (item.kind == "url") "URL" else "Text"
         val contentPadding = (24 * resources.displayMetrics.density).toInt()
         val statusText = TextView(this).apply {
             textSize = 18f
@@ -110,18 +123,60 @@ class MainActivity : Activity() {
 
         val target = TargetPreferences(this).load()
         if (target == null) {
-            statusText.setText("Delivery failed: configure an EagleShare target first.")
-            return true
+            FailedOutgoingPreferences(this).save(item)
+            showFailedOutgoing(item, "Delivery failed: configure an EagleShare target first.")
+            return
         }
 
         Thread {
-            val status = when (val result = TextShareDelivery.send(target, itemKind, text)) {
-                TextDeliveryResult.Success -> "$itemLabel delivered to EagleShare."
-                is TextDeliveryResult.Failure -> "Delivery failed: ${result.message}"
+            val result = TextShareDelivery.send(target, item.kind, item.content)
+            runOnUiThread {
+                when (result) {
+                    TextDeliveryResult.Success -> {
+                        FailedOutgoingPreferences(this).discard()
+                        statusText.text = "$itemLabel delivered to EagleShare."
+                    }
+                    is TextDeliveryResult.Failure -> {
+                        FailedOutgoingPreferences(this).save(item)
+                        showFailedOutgoing(item, "Delivery failed: ${result.message}")
+                    }
+                }
             }
-            runOnUiThread { statusText.text = status }
         }.start()
-        return true
+    }
+
+    private fun showFailedOutgoing(item: FailedOutgoingItem, message: String) {
+        val contentPadding = (24 * resources.displayMetrics.density).toInt()
+        val statusText = TextView(this).apply {
+            textSize = 18f
+            text = message
+        }
+        val retryButton = Button(this).apply {
+            text = "Retry"
+            setOnClickListener { sendOutgoingText(item) }
+        }
+        val discardButton = Button(this).apply {
+            text = "Discard"
+            setOnClickListener {
+                FailedOutgoingPreferences(this@MainActivity).discard()
+                statusText.text = "Failed outgoing item discarded."
+                isEnabled = false
+                retryButton.isEnabled = false
+            }
+        }
+        setContentView(
+            LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(contentPadding, contentPadding, contentPadding, contentPadding)
+                addView(TextView(this@MainActivity).apply {
+                    textSize = 22f
+                    text = "BearShare"
+                })
+                addView(statusText, fullWidthLayoutParams())
+                addView(retryButton, fullWidthLayoutParams())
+                addView(discardButton, fullWidthLayoutParams())
+            },
+        )
     }
 
     @Suppress("DEPRECATION")

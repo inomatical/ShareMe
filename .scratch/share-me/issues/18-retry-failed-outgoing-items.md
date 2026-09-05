@@ -6,6 +6,6 @@
 
 **Status:** ready-for-agent
 
-- [ ] Network failure, receiver shutdown, and non-success responses retain the current outgoing item as failed.
-- [ ] Retry resubmits the retained item without requiring the originating Android share action.
-- [ ] Discard removes the failed item from BearShare's temporary outgoing state.
+- [x] Network failure, receiver shutdown, and non-success responses retain the current outgoing item as failed.
+- [x] Retry resubmits the retained item without requiring the originating Android share action.
+- [x] Discard removes the failed item from BearShare's temporary outgoing state.

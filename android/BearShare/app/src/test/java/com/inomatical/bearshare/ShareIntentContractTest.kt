@@ -86,6 +86,22 @@ class ShareIntentContractTest {
     }
 
     @Test
+    fun retainsFailedOutgoingTextUntilRetrySucceedsOrUserDiscardsIt() {
+        val state = FailedOutgoingState()
+        val item = FailedOutgoingItem("text", "A retryable note")
+
+        state.completeAttempt(item, TextDeliveryResult.Failure("Could not reach EagleShare."))
+        assertEquals(item, state.item)
+
+        state.completeAttempt(item, TextDeliveryResult.Success)
+        assertNull(state.item)
+
+        state.retain(item)
+        state.discard()
+        assertNull(state.item)
+    }
+
+    @Test
     fun classifiesAbsoluteUrlSharesSeparatelyFromPlainText() {
         assertEquals("url", ShareIntentContract.itemKind("https://example.com/path?query=value#section"))
         assertEquals("text", ShareIntentContract.itemKind("A literal note with a URL: https://example.com"))
