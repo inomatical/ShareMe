@@ -5,6 +5,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 
 class ShareIntentContractTest {
     @Test
@@ -41,6 +43,15 @@ class ShareIntentContractTest {
     }
 
     @Test
+    fun acceptsSingleImageSharesOnlyWhenTheImageStreamIsPresent() {
+        assertTrue(ShareIntentContract.acceptsSingleImage(ShareIntentContract.SendAction, "image/png", true))
+        assertTrue(ShareIntentContract.acceptsSingleImage(ShareIntentContract.SendAction, "image/jpeg", true))
+        assertFalse(ShareIntentContract.acceptsSingleImage(ShareIntentContract.SendAction, "image/png", false))
+        assertFalse(ShareIntentContract.acceptsSingleImage(ShareIntentContract.SendMultipleAction, "image/png", true))
+        assertFalse(ShareIntentContract.acceptsSingleImage(ShareIntentContract.SendAction, "text/plain", true))
+    }
+
+    @Test
     fun classifiesAbsoluteUrlSharesSeparatelyFromPlainText() {
         assertEquals("url", ShareIntentContract.itemKind("https://example.com/path?query=value#section"))
         assertEquals("text", ShareIntentContract.itemKind("A literal note with a URL: https://example.com"))
@@ -54,6 +65,25 @@ class ShareIntentContractTest {
 
         assertTrue(multipart.contains("name=\"kind\"\r\n\r\nurl\r\n"))
         assertTrue(multipart.contains("https://example.com/a?b=c"))
+    }
+
+    @Test
+    fun streamsImageBytesInMultipartDelivery() {
+        val imageBytes = byteArrayOf(1, 2, 3, 4)
+        val output = ByteArrayOutputStream()
+
+        ImageShareDelivery.writeMultipart(
+            output,
+            "test-boundary",
+            "image/png",
+            "holiday.png",
+            ByteArrayInputStream(imageBytes),
+        )
+
+        val multipart = output.toByteArray()
+        assertTrue(multipart.toString(Charsets.UTF_8).contains("name=\"kind\"\r\n\r\nimage\r\n"))
+        assertTrue(multipart.toString(Charsets.UTF_8).contains("filename=\"holiday.png\""))
+        assertTrue(multipart.asList().windowed(imageBytes.size).any { it.toByteArray().contentEquals(imageBytes) })
     }
 
     @Test

@@ -6,6 +6,6 @@
 
 **Status:** ready-for-agent
 
-- [ ] Android's standard share sheet offers BearShare for supported image content.
-- [ ] BearShare streams the image without requiring the complete image in memory.
-- [ ] EagleShare completion produces a success result, while delivery failure produces a failure result.
+- [x] Android's standard share sheet offers BearShare for supported image content.
+- [x] BearShare streams the image without requiring the complete image in memory.
+- [x] EagleShare completion produces a success result, while delivery failure produces a failure result.

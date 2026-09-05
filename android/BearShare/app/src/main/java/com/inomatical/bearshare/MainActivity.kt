@@ -2,7 +2,9 @@ package com.inomatical.bearshare
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.text.InputType
 import android.view.ViewGroup
 import android.widget.Button
@@ -15,7 +17,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (!handleSharedText(intent)) {
+        if (!handleSharedText(intent) && !handleSharedImage(intent)) {
             showTargetConfiguration()
         }
     }
@@ -24,7 +26,7 @@ class MainActivity : Activity() {
         super.onNewIntent(intent)
         setIntent(intent)
 
-        if (!handleSharedText(intent)) {
+        if (!handleSharedText(intent) && !handleSharedImage(intent)) {
             showTargetConfiguration()
         }
     }
@@ -121,6 +123,60 @@ class MainActivity : Activity() {
         }.start()
         return true
     }
+
+    @Suppress("DEPRECATION")
+    private fun handleSharedImage(intent: Intent): Boolean {
+        val imageUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+        if (!ShareIntentContract.acceptsSingleImage(intent.action, intent.type, imageUri != null)) {
+            return false
+        }
+
+        val mimeType = intent.type!!
+        val contentPadding = (24 * resources.displayMetrics.density).toInt()
+        val statusText = TextView(this).apply {
+            textSize = 18f
+            setText("Sending image to EagleShare...")
+        }
+        setContentView(
+            LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(contentPadding, contentPadding, contentPadding, contentPadding)
+                addView(TextView(this@MainActivity).apply {
+                    textSize = 22f
+                    setText("BearShare")
+                })
+                addView(statusText, fullWidthLayoutParams())
+            },
+        )
+
+        val target = TargetPreferences(this).load()
+        if (target == null) {
+            statusText.setText("Delivery failed: configure an EagleShare target first.")
+            return true
+        }
+
+        val fileName = imageFileName(imageUri!!)
+        Thread {
+            val result = try {
+                contentResolver.openInputStream(imageUri)?.use { content ->
+                    ImageShareDelivery.send(target, mimeType, fileName, content)
+                } ?: ImageDeliveryResult.Failure("Could not open the shared image.")
+            } catch (_: SecurityException) {
+                ImageDeliveryResult.Failure("Could not open the shared image.")
+            }
+            val status = when (result) {
+                ImageDeliveryResult.Success -> "Image delivered to EagleShare."
+                is ImageDeliveryResult.Failure -> "Delivery failed: ${result.message}"
+            }
+            runOnUiThread { statusText.text = status }
+        }.start()
+        return true
+    }
+
+    private fun imageFileName(uri: Uri): String =
+        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0) else null
+        } ?: uri.lastPathSegment ?: "shared-image"
 
     private fun fullWidthLayoutParams() = LinearLayout.LayoutParams(
         ViewGroup.LayoutParams.MATCH_PARENT,
