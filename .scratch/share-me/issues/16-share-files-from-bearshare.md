@@ -6,6 +6,6 @@
 
 **Status:** ready-for-agent
 
-- [ ] Android's standard share sheet offers BearShare for supported files.
-- [ ] BearShare sends one file using the agreed multipart contract without loading the whole file into memory.
-- [ ] EagleShare's durable completion controls the success result shown to the user.
+- [x] Android's standard share sheet offers BearShare for supported files.
+- [x] BearShare sends one file using the agreed multipart contract without loading the whole file into memory.
+- [x] EagleShare's durable completion controls the success result shown to the user.

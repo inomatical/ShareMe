@@ -19,6 +19,13 @@ internal object ShareIntentContract {
     fun acceptsSingleImage(action: String?, mimeType: String?, hasContentStream: Boolean): Boolean =
         action == SendAction && mimeType?.startsWith("image/") == true && hasContentStream
 
+    fun acceptsSingleFile(action: String?, mimeType: String?, hasContentStream: Boolean): Boolean =
+        action == SendAction &&
+            !mimeType.isNullOrBlank() &&
+            mimeType != "text/plain" &&
+            !mimeType.startsWith("image/") &&
+            hasContentStream
+
     fun itemKind(content: String): String =
         if (runCatching { URI(content).isAbsolute }.getOrDefault(false)) "url" else "text"
 }

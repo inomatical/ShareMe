@@ -17,7 +17,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (!handleSharedText(intent) && !handleSharedImage(intent)) {
+        if (!handleSharedText(intent) && !handleSharedImage(intent) && !handleSharedFile(intent)) {
             showTargetConfiguration()
         }
     }
@@ -26,7 +26,7 @@ class MainActivity : Activity() {
         super.onNewIntent(intent)
         setIntent(intent)
 
-        if (!handleSharedText(intent) && !handleSharedImage(intent)) {
+        if (!handleSharedText(intent) && !handleSharedImage(intent) && !handleSharedFile(intent)) {
             showTargetConfiguration()
         }
     }
@@ -155,7 +155,7 @@ class MainActivity : Activity() {
             return true
         }
 
-        val fileName = imageFileName(imageUri!!)
+        val fileName = sharedFileName(imageUri!!)
         Thread {
             val result = try {
                 contentResolver.openInputStream(imageUri)?.use { content ->
@@ -173,10 +173,59 @@ class MainActivity : Activity() {
         return true
     }
 
-    private fun imageFileName(uri: Uri): String =
+    @Suppress("DEPRECATION")
+    private fun handleSharedFile(intent: Intent): Boolean {
+        val fileUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+        if (!ShareIntentContract.acceptsSingleFile(intent.action, intent.type, fileUri != null)) {
+            return false
+        }
+
+        val mimeType = intent.type!!
+        val contentPadding = (24 * resources.displayMetrics.density).toInt()
+        val statusText = TextView(this).apply {
+            textSize = 18f
+            setText("Sending file to EagleShare...")
+        }
+        setContentView(
+            LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(contentPadding, contentPadding, contentPadding, contentPadding)
+                addView(TextView(this@MainActivity).apply {
+                    textSize = 22f
+                    setText("BearShare")
+                })
+                addView(statusText, fullWidthLayoutParams())
+            },
+        )
+
+        val target = TargetPreferences(this).load()
+        if (target == null) {
+            statusText.setText("Delivery failed: configure an EagleShare target first.")
+            return true
+        }
+
+        val fileName = sharedFileName(fileUri!!)
+        Thread {
+            val result = try {
+                contentResolver.openInputStream(fileUri)?.use { content ->
+                    FileShareDelivery.send(target, mimeType, fileName, content)
+                } ?: FileDeliveryResult.Failure("Could not open the shared file.")
+            } catch (_: SecurityException) {
+                FileDeliveryResult.Failure("Could not open the shared file.")
+            }
+            val status = when (result) {
+                FileDeliveryResult.Success -> "File delivered to EagleShare."
+                is FileDeliveryResult.Failure -> "Delivery failed: ${result.message}"
+            }
+            runOnUiThread { statusText.text = status }
+        }.start()
+        return true
+    }
+
+    private fun sharedFileName(uri: Uri): String =
         contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) cursor.getString(0) else null
-        } ?: uri.lastPathSegment ?: "shared-image"
+        } ?: uri.lastPathSegment ?: "shared-file"
 
     private fun fullWidthLayoutParams() = LinearLayout.LayoutParams(
         ViewGroup.LayoutParams.MATCH_PARENT,

@@ -52,6 +52,16 @@ class ShareIntentContractTest {
     }
 
     @Test
+    fun acceptsSingleFileSharesOnlyForNonTextAndNonImageContent() {
+        assertTrue(ShareIntentContract.acceptsSingleFile(ShareIntentContract.SendAction, "application/pdf", true))
+        assertTrue(ShareIntentContract.acceptsSingleFile(ShareIntentContract.SendAction, "application/zip", true))
+        assertFalse(ShareIntentContract.acceptsSingleFile(ShareIntentContract.SendAction, "application/pdf", false))
+        assertFalse(ShareIntentContract.acceptsSingleFile(ShareIntentContract.SendAction, "text/plain", true))
+        assertFalse(ShareIntentContract.acceptsSingleFile(ShareIntentContract.SendAction, "image/png", true))
+        assertFalse(ShareIntentContract.acceptsSingleFile(ShareIntentContract.SendMultipleAction, "application/pdf", true))
+    }
+
+    @Test
     fun classifiesAbsoluteUrlSharesSeparatelyFromPlainText() {
         assertEquals("url", ShareIntentContract.itemKind("https://example.com/path?query=value#section"))
         assertEquals("text", ShareIntentContract.itemKind("A literal note with a URL: https://example.com"))
@@ -84,6 +94,25 @@ class ShareIntentContractTest {
         assertTrue(multipart.toString(Charsets.UTF_8).contains("name=\"kind\"\r\n\r\nimage\r\n"))
         assertTrue(multipart.toString(Charsets.UTF_8).contains("filename=\"holiday.png\""))
         assertTrue(multipart.asList().windowed(imageBytes.size).any { it.toByteArray().contentEquals(imageBytes) })
+    }
+
+    @Test
+    fun streamsFileBytesInMultipartDelivery() {
+        val fileBytes = byteArrayOf(5, 6, 7, 8)
+        val output = ByteArrayOutputStream()
+
+        FileShareDelivery.writeMultipart(
+            output,
+            "test-boundary",
+            "application/pdf",
+            "report.pdf",
+            ByteArrayInputStream(fileBytes),
+        )
+
+        val multipart = output.toByteArray()
+        assertTrue(multipart.toString(Charsets.UTF_8).contains("name=\"kind\"\r\n\r\nfile\r\n"))
+        assertTrue(multipart.toString(Charsets.UTF_8).contains("filename=\"report.pdf\""))
+        assertTrue(multipart.asList().windowed(fileBytes.size).any { it.toByteArray().contentEquals(fileBytes) })
     }
 
     @Test
