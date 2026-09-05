@@ -4,7 +4,9 @@
 
 **Blocked by:** 07 — Receive and copy text in EagleShare.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A valid URL request produces a distinct URL inbox item with durable metadata and stored content.
-- [ ] Preview and clipboard actions preserve the literal URL value.
+- [x] A valid URL request produces a distinct URL inbox item with durable metadata and stored content.
+- [x] Preview and clipboard actions preserve the literal URL value.
+
+**Verification:** `dotnet test ShareMe.slnx --no-restore`

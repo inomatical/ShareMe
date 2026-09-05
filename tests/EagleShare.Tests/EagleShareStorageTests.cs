@@ -51,6 +51,19 @@ public sealed class EagleShareStorageTests : IDisposable
         Assert.Equal(item, persistedItem);
     }
 
+    [Fact]
+    public void SaveUrl_PersistsDistinctUrlContentAndInboxMetadata()
+    {
+        var storage = new EagleShareStorage(_temporaryRoot);
+
+        var item = storage.SaveUrl("https://example.com/path?query=value#section");
+
+        Assert.Equal("url", item.Kind);
+        Assert.Equal(item.Content, File.ReadAllText(Path.Combine(storage.InboxPath, $"{item.Id}.url")));
+        var persistedItems = JsonSerializer.Deserialize<List<InboxItem>>(File.ReadAllText(storage.InboxMetadataPath));
+        Assert.Equal(item, Assert.Single(persistedItems!));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_temporaryRoot))

@@ -48,6 +48,22 @@ public sealed class EagleShareReceiverContractTests
         var persistedItems = JsonSerializer.Deserialize<List<InboxItem>>(File.ReadAllText(harness.Storage.InboxMetadataPath));
         Assert.Contains(item, persistedItems!);
     }
+
+    [Fact]
+    public async Task MultipartPost_WithValidUrl_ReturnsSuccessAfterUrlIsDurable()
+    {
+        await using var harness = await EagleShareReceiverContractHarness.StartAsync();
+
+        var response = await harness.PostItemAsync("url", "https://example.com/path?query=value#section");
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var item = JsonSerializer.Deserialize<InboxItem>(response.Body, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        Assert.NotNull(item);
+        Assert.Equal("url", item.Kind);
+        Assert.Equal(item.Content, File.ReadAllText(Path.Combine(harness.Storage.InboxPath, $"{item.Id}.url")));
+        var persistedItems = JsonSerializer.Deserialize<List<InboxItem>>(File.ReadAllText(harness.Storage.InboxMetadataPath));
+        Assert.Contains(item, persistedItems!);
+    }
 }
 
 internal sealed class EagleShareReceiverContractHarness : IAsyncDisposable

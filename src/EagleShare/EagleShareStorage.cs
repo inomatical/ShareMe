@@ -66,15 +66,25 @@ public sealed class EagleShareStorage
 
     public InboxItem SaveText(string content)
     {
+        return SaveItem("text", content, ".txt");
+    }
+
+    public InboxItem SaveUrl(string content)
+    {
+        return SaveItem("url", content, ".url");
+    }
+
+    private InboxItem SaveItem(string kind, string content, string extension)
+    {
         ArgumentNullException.ThrowIfNull(content);
 
         lock (_inboxLock)
         {
             Initialize();
-            var item = new InboxItem(Guid.NewGuid().ToString("N"), "text", content, DateTimeOffset.UtcNow);
-            var textPath = Path.Combine(InboxPath, $"{item.Id}.txt");
+            var item = new InboxItem(Guid.NewGuid().ToString("N"), kind, content, DateTimeOffset.UtcNow);
+            var contentPath = Path.Combine(InboxPath, $"{item.Id}{extension}");
 
-            WriteDurableFile(textPath, Encoding.UTF8.GetBytes(content));
+            WriteDurableFile(contentPath, Encoding.UTF8.GetBytes(content));
 
             var items = JsonSerializer.Deserialize<List<InboxItem>>(File.ReadAllText(InboxMetadataPath)) ?? [];
             items.Add(item);

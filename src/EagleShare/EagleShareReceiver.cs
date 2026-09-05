@@ -39,7 +39,7 @@ public sealed class EagleShareReceiver : IAsyncDisposable
 
     public bool IsRunning => _application is not null;
 
-    public event EventHandler<InboxItem>? TextReceived;
+    public event EventHandler<InboxItem>? ItemReceived;
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -60,13 +60,25 @@ public sealed class EagleShareReceiver : IAsyncDisposable
             }
 
             var form = await request.ReadFormAsync(cancellationToken);
-            if (!string.Equals(form["kind"], "text", StringComparison.Ordinal) || form["content"].Count != 1)
+            if (form["content"].Count != 1)
             {
-                return Results.BadRequest("A single text content field is required.");
+                return Results.BadRequest("A single content field is required.");
             }
 
-            var item = _storage.SaveText(form["content"].ToString());
-            TextReceived?.Invoke(this, item);
+            var content = form["content"].ToString();
+            var item = form["kind"].ToString() switch
+            {
+                "text" => _storage.SaveText(content),
+                "url" when Uri.TryCreate(content, UriKind.Absolute, out _) => _storage.SaveUrl(content),
+                _ => null,
+            };
+
+            if (item is null)
+            {
+                return Results.BadRequest("A valid text or absolute URL item is required.");
+            }
+
+            ItemReceived?.Invoke(this, item);
             return Results.Created($"/api/items/{item.Id}", item);
         });
         application.MapFallback(() => Results.NotFound());

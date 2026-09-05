@@ -19,7 +19,7 @@ public partial class MainWindow : Window
         _receiver = new EagleShareReceiver();
         InitializeComponent();
         InboxList.ItemsSource = _inboxItems;
-        _receiver.TextReceived += Receiver_TextReceived;
+        _receiver.ItemReceived += Receiver_ItemReceived;
         Loaded += MainWindow_Loaded;
     }
 
@@ -46,13 +46,13 @@ public partial class MainWindow : Window
         }
     }
 
-    private void Receiver_TextReceived(object? sender, InboxItem item)
+    private void Receiver_ItemReceived(object? sender, InboxItem item)
     {
         _ = Dispatcher.InvokeAsync(() =>
         {
             _inboxItems.Add(item);
             InboxList.SelectedItem = item;
-            StatusText.Text = "Text item received.";
+            StatusText.Text = $"{item.Kind} item received.";
         });
     }
 
