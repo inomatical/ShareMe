@@ -6,6 +6,6 @@
 
 **Status:** ready-for-agent
 
-- [ ] A batch reports success and failure separately for each item.
-- [ ] Failed batch items remain individually retryable or discardable after the batch completes.
-- [ ] Successfully delivered items are not retransmitted when a failed item is retried.
+- [x] A batch reports success and failure separately for each item.
+- [x] Failed batch items remain individually retryable or discardable after the batch completes.
+- [x] Successfully delivered items are not retransmitted when a failed item is retried.

@@ -102,6 +102,26 @@ class ShareIntentContractTest {
     }
 
     @Test
+    fun retainsOnlyFailedBatchFilesForIndependentRetryOrDiscard() {
+        val state = FailedBatchFileState()
+        val delivered = FailedBatchFile("content://share/delivered", "delivered.pdf")
+        val failed = FailedBatchFile("content://share/failed", "failed.pdf")
+
+        state.record(delivered, FileDeliveryResult.Success)
+        state.record(failed, FileDeliveryResult.Failure("Could not reach EagleShare."))
+
+        assertFalse(state.contains(delivered.uri))
+        assertTrue(state.contains(failed.uri))
+
+        state.record(failed, FileDeliveryResult.Success)
+        assertFalse(state.contains(failed.uri))
+
+        state.record(failed, FileDeliveryResult.Failure("EagleShare rejected the file."))
+        state.discard(failed.uri)
+        assertTrue(state.items().isEmpty())
+    }
+
+    @Test
     fun classifiesAbsoluteUrlSharesSeparatelyFromPlainText() {
         assertEquals("url", ShareIntentContract.itemKind("https://example.com/path?query=value#section"))
         assertEquals("text", ShareIntentContract.itemKind("A literal note with a URL: https://example.com"))

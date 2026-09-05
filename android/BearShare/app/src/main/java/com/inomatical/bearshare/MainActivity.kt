@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.text.InputType
+import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
@@ -14,6 +15,8 @@ import android.widget.TextView
 import android.widget.Toast
 
 class MainActivity : Activity() {
+    private val failedBatchFiles = FailedBatchFileState()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -308,7 +311,7 @@ class MainActivity : Activity() {
         val target = TargetPreferences(this).load()
         if (target == null) {
             statusText.setText("Delivery failed: configure an EagleShare target first.")
-            fileUris.forEach { uri -> addFileResult(results, sharedFileName(uri), FileDeliveryResult.Failure("Not sent.")) }
+            fileUris.forEach { uri -> addBatchFileResult(results, uri, FileDeliveryResult.Failure("Not sent.")) }
             return true
         }
 
@@ -317,7 +320,7 @@ class MainActivity : Activity() {
                 fileUris,
                 sendItem = { uri -> sendSharedFile(target, intent.type, uri) },
                 onOutcome = { outcome ->
-                    runOnUiThread { addFileResult(results, sharedFileName(outcome.item), outcome.result) }
+                    runOnUiThread { addBatchFileResult(results, outcome.item, outcome.result) }
                 },
             )
             runOnUiThread { statusText.text = "File delivery complete." }
@@ -335,12 +338,71 @@ class MainActivity : Activity() {
             FileDeliveryResult.Failure("Could not open the shared file.")
         }
 
-    private fun addFileResult(results: LinearLayout, fileName: String, result: FileDeliveryResult) {
-        val status = when (result) {
-            FileDeliveryResult.Success -> "Delivered"
-            is FileDeliveryResult.Failure -> "Failed: ${result.message}"
+    private fun addBatchFileResult(results: LinearLayout, uri: Uri, result: FileDeliveryResult) {
+        val fileName = sharedFileName(uri)
+        val statusText = TextView(this).apply {
+            text = "$fileName: ${fileResultText(result)}"
         }
-        results.addView(TextView(this).apply { text = "$fileName: $status" }, fullWidthLayoutParams())
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(statusText, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        }
+
+        if (result is FileDeliveryResult.Failure) {
+            val failedItem = FailedBatchFile(uri.toString(), fileName)
+            failedBatchFiles.record(failedItem, result)
+            val retryButton = Button(this).apply { text = "Retry" }
+            val discardButton = Button(this).apply { text = "Discard" }
+            retryButton.setOnClickListener {
+                retryButton.isEnabled = false
+                discardButton.isEnabled = false
+                statusText.text = "$fileName: Retrying..."
+                retryBatchFile(failedItem, uri, statusText, retryButton, discardButton)
+            }
+            discardButton.setOnClickListener {
+                failedBatchFiles.discard(failedItem.uri)
+                statusText.text = "$fileName: Discarded"
+                retryButton.isEnabled = false
+                discardButton.isEnabled = false
+            }
+            row.addView(retryButton)
+            row.addView(discardButton)
+        }
+
+        results.addView(row, fullWidthLayoutParams())
+    }
+
+    private fun retryBatchFile(
+        failedItem: FailedBatchFile,
+        uri: Uri,
+        statusText: TextView,
+        retryButton: Button,
+        discardButton: Button,
+    ) {
+        Thread {
+            val target = TargetPreferences(this).load()
+            val result = if (target == null) {
+                FileDeliveryResult.Failure("Configure an EagleShare target first.")
+            } else {
+                sendSharedFile(target, null, uri)
+            }
+            runOnUiThread {
+                failedBatchFiles.record(failedItem, result)
+                statusText.text = "${failedItem.fileName}: ${fileResultText(result)}"
+                if (result is FileDeliveryResult.Success) {
+                    retryButton.visibility = View.GONE
+                    discardButton.visibility = View.GONE
+                } else {
+                    retryButton.isEnabled = true
+                    discardButton.isEnabled = true
+                }
+            }
+        }.start()
+    }
+
+    private fun fileResultText(result: FileDeliveryResult): String = when (result) {
+        FileDeliveryResult.Success -> "Delivered"
+        is FileDeliveryResult.Failure -> "Failed: ${result.message}"
     }
 
     private fun sharedFileName(uri: Uri): String =
