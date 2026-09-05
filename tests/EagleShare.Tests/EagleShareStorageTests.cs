@@ -1,4 +1,5 @@
 using System.IO;
+using System.Collections.Generic;
 using System.Text.Json;
 using Xunit;
 
@@ -62,6 +63,29 @@ public sealed class EagleShareStorageTests : IDisposable
         Assert.Equal(item.Content, File.ReadAllText(Path.Combine(storage.InboxPath, $"{item.Id}.url")));
         var persistedItems = JsonSerializer.Deserialize<List<InboxItem>>(File.ReadAllText(storage.InboxMetadataPath));
         Assert.Equal(item, Assert.Single(persistedItems!));
+    }
+
+    [Fact]
+    public void SaveImage_StreamsToIncomingThenFinalizesCollisionSafeImageMetadata()
+    {
+        var storage = new EagleShareStorage(_temporaryRoot);
+        var imageBytes = new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 };
+        var progress = new List<long>();
+
+        using var firstImage = new MemoryStream(imageBytes);
+        using var secondImage = new MemoryStream(imageBytes);
+        var firstItem = storage.SaveImage("holiday.png", "image/png", firstImage, progress.Add);
+        var secondItem = storage.SaveImage("holiday.png", "image/png", secondImage);
+
+        Assert.Equal("image", firstItem.Kind);
+        Assert.Equal("holiday.png", firstItem.OriginalFileName);
+        Assert.Equal("image/png", firstItem.MimeType);
+        Assert.NotEqual(firstItem.StoredFileName, secondItem.StoredFileName);
+        Assert.Equal(imageBytes, File.ReadAllBytes(Path.Combine(storage.InboxPath, firstItem.StoredFileName!)));
+        Assert.Empty(Directory.EnumerateFiles(storage.IncomingPath));
+        Assert.Equal(imageBytes.Length, Assert.Single(progress));
+        var persistedItems = JsonSerializer.Deserialize<List<InboxItem>>(File.ReadAllText(storage.InboxMetadataPath));
+        Assert.Equal(2, persistedItems!.Count);
     }
 
     public void Dispose()

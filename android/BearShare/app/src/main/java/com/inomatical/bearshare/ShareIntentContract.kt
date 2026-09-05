@@ -1,5 +1,7 @@
 package com.inomatical.bearshare
 
+import java.net.URI
+
 internal object ShareIntentContract {
     const val SendAction = "android.intent.action.SEND"
     const val SendMultipleAction = "android.intent.action.SEND_MULTIPLE"
@@ -13,4 +15,7 @@ internal object ShareIntentContract {
         } else {
             null
         }
+
+    fun itemKind(content: String): String =
+        if (runCatching { URI(content).isAbsolute }.getOrDefault(false)) "url" else "text"
 }

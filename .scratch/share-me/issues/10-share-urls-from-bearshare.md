@@ -4,7 +4,9 @@
 
 **Blocked by:** 08 — Share plain text from BearShare; 09 — Receive and copy URLs in EagleShare.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Android sharing of a URL routes the literal URL to BearShare.
-- [ ] EagleShare receives and selects the URL item after durable persistence.
+- [x] Android sharing of a URL routes the literal URL to BearShare.
+- [x] EagleShare receives and selects the URL item after durable persistence.
+
+**Verification:** `android\BearShare\gradlew.bat -p android\BearShare testDebugUnitTest`

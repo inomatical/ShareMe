@@ -41,6 +41,22 @@ class ShareIntentContractTest {
     }
 
     @Test
+    fun classifiesAbsoluteUrlSharesSeparatelyFromPlainText() {
+        assertEquals("url", ShareIntentContract.itemKind("https://example.com/path?query=value#section"))
+        assertEquals("text", ShareIntentContract.itemKind("A literal note with a URL: https://example.com"))
+        assertEquals("text", ShareIntentContract.itemKind("example.com"))
+    }
+
+    @Test
+    fun encodesUrlKindAndLiteralValueInMultipartDelivery() {
+        val multipart = TextShareDelivery.multipartBody("test-boundary", "url", "https://example.com/a?b=c")
+            .toString(Charsets.UTF_8)
+
+        assertTrue(multipart.contains("name=\"kind\"\r\n\r\nurl\r\n"))
+        assertTrue(multipart.contains("https://example.com/a?b=c"))
+    }
+
+    @Test
     fun formatsConfiguredTargetAsEagleShareItemsEndpoint() {
         assertEquals(
             "http://192.168.1.20:61432/api/items",

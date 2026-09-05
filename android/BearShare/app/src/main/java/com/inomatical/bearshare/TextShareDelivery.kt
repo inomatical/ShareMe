@@ -12,7 +12,7 @@ sealed interface TextDeliveryResult {
 }
 
 internal object TextShareDelivery {
-    fun send(target: EagleShareTarget, text: String): TextDeliveryResult {
+    fun send(target: EagleShareTarget, kind: String, content: String): TextDeliveryResult {
         return try {
             val boundary = "BearShare-${UUID.randomUUID()}"
             val connection = (endpointFor(target).openConnection() as HttpURLConnection).apply {
@@ -24,7 +24,7 @@ internal object TextShareDelivery {
             }
 
             connection.outputStream.use { output ->
-                output.write(multipartBody(boundary, text))
+                output.write(multipartBody(boundary, kind, content))
             }
 
             val result = if (connection.responseCode in 200..299) {
@@ -44,14 +44,14 @@ internal object TextShareDelivery {
         return URL("http://$address:${target.port}/api/items")
     }
 
-    private fun multipartBody(boundary: String, text: String): ByteArray = buildString {
+    internal fun multipartBody(boundary: String, kind: String, content: String): ByteArray = buildString {
         append("--$boundary\r\n")
         append("Content-Disposition: form-data; name=\"kind\"\r\n\r\n")
-        append("text\r\n")
+        append("$kind\r\n")
         append("--$boundary\r\n")
         append("Content-Disposition: form-data; name=\"content\"\r\n")
         append("Content-Type: text/plain; charset=UTF-8\r\n\r\n")
-        append(text)
+        append(content)
         append("\r\n--$boundary--\r\n")
     }.toByteArray(Charsets.UTF_8)
 

@@ -4,8 +4,10 @@
 
 **Blocked by:** 03 — Establish EagleShare local storage; 04 — Establish EagleShare receiver lifecycle; 06 — Establish transfer contract test harness.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Image bytes are streamed into incoming storage and do not become an inbox item until finalized.
-- [ ] A completed item retains its original filename and available MIME type while using collision-safe stored content.
-- [ ] The main window shows incoming transfer progress and selects the completed image.
+- [x] Image bytes are streamed into incoming storage and do not become an inbox item until finalized.
+- [x] A completed item retains its original filename and available MIME type while using collision-safe stored content.
+- [x] The main window shows incoming transfer progress and selects the completed image.
+
+**Verification:** `dotnet test ShareMe.slnx --no-restore`

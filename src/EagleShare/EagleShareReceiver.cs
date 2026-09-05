@@ -41,6 +41,8 @@ public sealed class EagleShareReceiver : IAsyncDisposable
 
     public event EventHandler<InboxItem>? ItemReceived;
 
+    public event EventHandler<IncomingTransferProgress>? ImageProgress;
+
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
         if (_application is not null)
@@ -60,22 +62,36 @@ public sealed class EagleShareReceiver : IAsyncDisposable
             }
 
             var form = await request.ReadFormAsync(cancellationToken);
-            if (form["content"].Count != 1)
+            var kind = form["kind"].ToString();
+            InboxItem? item;
+            if (kind == "image" && form["content"].Count == 0 && form.Files.Count == 1 && form.Files[0].ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
             {
-                return Results.BadRequest("A single content field is required.");
+                var image = form.Files[0];
+                using var imageStream = image.OpenReadStream();
+                item = _storage.SaveImage(
+                    image.FileName,
+                    image.ContentType,
+                    imageStream,
+                    bytesReceived => ImageProgress?.Invoke(this, new IncomingTransferProgress(bytesReceived, image.Length)));
             }
-
-            var content = form["content"].ToString();
-            var item = form["kind"].ToString() switch
+            else if (form["content"].Count == 1)
             {
-                "text" => _storage.SaveText(content),
-                "url" when Uri.TryCreate(content, UriKind.Absolute, out _) => _storage.SaveUrl(content),
-                _ => null,
-            };
+                var content = form["content"].ToString();
+                item = kind switch
+                {
+                    "text" => _storage.SaveText(content),
+                    "url" when Uri.TryCreate(content, UriKind.Absolute, out _) => _storage.SaveUrl(content),
+                    _ => null,
+                };
+            }
+            else
+            {
+                item = null;
+            }
 
             if (item is null)
             {
-                return Results.BadRequest("A valid text or absolute URL item is required.");
+                return Results.BadRequest("A valid text, absolute URL, or single image file is required.");
             }
 
             ItemReceived?.Invoke(this, item);

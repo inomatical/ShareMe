@@ -20,6 +20,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         InboxList.ItemsSource = _inboxItems;
         _receiver.ItemReceived += Receiver_ItemReceived;
+        _receiver.ImageProgress += Receiver_ImageProgress;
         Loaded += MainWindow_Loaded;
     }
 
@@ -52,7 +53,19 @@ public partial class MainWindow : Window
         {
             _inboxItems.Add(item);
             InboxList.SelectedItem = item;
+            IncomingProgress.Visibility = Visibility.Collapsed;
             StatusText.Text = $"{item.Kind} item received.";
+        });
+    }
+
+    private void Receiver_ImageProgress(object? sender, IncomingTransferProgress progress)
+    {
+        _ = Dispatcher.InvokeAsync(() =>
+        {
+            IncomingProgress.Visibility = Visibility.Visible;
+            IncomingProgress.Maximum = Math.Max(progress.TotalBytes, 1);
+            IncomingProgress.Value = Math.Min(progress.BytesReceived, IncomingProgress.Maximum);
+            StatusText.Text = $"Receiving image: {progress.BytesReceived} of {progress.TotalBytes} bytes.";
         });
     }
 

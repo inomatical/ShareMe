@@ -76,10 +76,20 @@
 
         <!-- Status bar. -->
         <Border Grid.Row="2" Background="#F3F4F6" Padding="12,6">
-            <TextBlock x:Name="StatusText"
-                       Text="Ready"
-                       FontSize="12"
-                       Foreground="#374151"/>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock x:Name="StatusText"
+                           Text="Ready"
+                           FontSize="12"
+                           Foreground="#374151"
+                           VerticalAlignment="Center"/>
+                <ProgressBar x:Name="IncomingProgress"
+                             Width="160"
+                             Height="12"
+                             Margin="12,0,0,0"
+                             Minimum="0"
+                             Visibility="Collapsed"
+                             VerticalAlignment="Center"/>
+            </StackPanel>
         </Border>
     </Grid>
 </Window>

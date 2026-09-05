@@ -74,6 +74,75 @@ public sealed class EagleShareStorage
         return SaveItem("url", content, ".url");
     }
 
+    public InboxItem SaveImage(
+        string originalFileName,
+        string? mimeType,
+        Stream content,
+        Action<long>? progress = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(originalFileName);
+        ArgumentNullException.ThrowIfNull(content);
+
+        var safeFileName = Path.GetFileName(originalFileName);
+        if (string.IsNullOrWhiteSpace(safeFileName))
+        {
+            throw new ArgumentException("A file name is required.", nameof(originalFileName));
+        }
+
+        lock (_inboxLock)
+        {
+            Initialize();
+            var itemId = Guid.NewGuid().ToString("N");
+            var extension = Path.GetExtension(safeFileName);
+            var storedFileName = $"{itemId}{extension}";
+            var incomingPath = Path.Combine(IncomingPath, $"{itemId}.upload");
+            var finalPath = Path.Combine(InboxPath, storedFileName);
+
+            try
+            {
+                using (var output = new FileStream(
+                           incomingPath,
+                           FileMode.CreateNew,
+                           FileAccess.Write,
+                           FileShare.None,
+                           bufferSize: 81920,
+                           FileOptions.WriteThrough))
+                {
+                    var buffer = new byte[81920];
+                    long bytesWritten = 0;
+                    int bytesRead;
+                    while ((bytesRead = content.Read(buffer, 0, buffer.Length)) > 0)
+                    {
+                        output.Write(buffer, 0, bytesRead);
+                        bytesWritten += bytesRead;
+                        progress?.Invoke(bytesWritten);
+                    }
+
+                    output.Flush(flushToDisk: true);
+                }
+
+                File.Move(incomingPath, finalPath);
+                var item = new InboxItem(
+                    itemId,
+                    "image",
+                    safeFileName,
+                    DateTimeOffset.UtcNow,
+                    safeFileName,
+                    mimeType,
+                    storedFileName);
+                AppendToMetadata(item);
+                return item;
+            }
+            finally
+            {
+                if (File.Exists(incomingPath))
+                {
+                    File.Delete(incomingPath);
+                }
+            }
+        }
+    }
+
     private InboxItem SaveItem(string kind, string content, string extension)
     {
         ArgumentNullException.ThrowIfNull(content);
@@ -86,12 +155,17 @@ public sealed class EagleShareStorage
 
             WriteDurableFile(contentPath, Encoding.UTF8.GetBytes(content));
 
-            var items = JsonSerializer.Deserialize<List<InboxItem>>(File.ReadAllText(InboxMetadataPath)) ?? [];
-            items.Add(item);
-            WriteDurableFile(InboxMetadataPath, JsonSerializer.SerializeToUtf8Bytes(items));
+            AppendToMetadata(item);
 
             return item;
         }
+    }
+
+    private void AppendToMetadata(InboxItem item)
+    {
+        var items = JsonSerializer.Deserialize<List<InboxItem>>(File.ReadAllText(InboxMetadataPath)) ?? [];
+        items.Add(item);
+        WriteDurableFile(InboxMetadataPath, JsonSerializer.SerializeToUtf8Bytes(items));
     }
 
     private static void WriteDurableFile(string path, byte[] content)

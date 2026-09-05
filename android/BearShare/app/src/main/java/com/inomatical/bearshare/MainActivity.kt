@@ -86,11 +86,13 @@ class MainActivity : Activity() {
             intent.type,
             intent.getCharSequenceExtra(Intent.EXTRA_TEXT),
         ) ?: return false
+        val itemKind = ShareIntentContract.itemKind(text)
+        val itemLabel = if (itemKind == "url") "URL" else "Text"
 
         val contentPadding = (24 * resources.displayMetrics.density).toInt()
         val statusText = TextView(this).apply {
             textSize = 18f
-            setText("Sending text to EagleShare...")
+            setText("Sending $itemLabel to EagleShare...")
         }
         setContentView(
             LinearLayout(this).apply {
@@ -111,8 +113,8 @@ class MainActivity : Activity() {
         }
 
         Thread {
-            val status = when (val result = TextShareDelivery.send(target, text)) {
-                TextDeliveryResult.Success -> "Text delivered to EagleShare."
+            val status = when (val result = TextShareDelivery.send(target, itemKind, text)) {
+                TextDeliveryResult.Success -> "$itemLabel delivered to EagleShare."
                 is TextDeliveryResult.Failure -> "Delivery failed: ${result.message}"
             }
             runOnUiThread { statusText.text = status }
