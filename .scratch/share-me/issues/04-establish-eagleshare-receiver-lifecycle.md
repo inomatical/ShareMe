@@ -4,8 +4,8 @@
 
 **Blocked by:** 01 — Create EagleShare desktop application.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The open main window visibly presents a usable LAN address and listening port, including the default port.
-- [ ] Closing the main window makes the local receiver unavailable and does not leave a background receiver running.
-- [ ] Private-network Windows Firewall permission is supported as the expected first-listen operating path.
+- [x] The open main window visibly presents a usable LAN address and listening port, including the default port.
+- [x] Closing the main window makes the local receiver unavailable and does not leave a background receiver running.
+- [x] Private-network Windows Firewall permission is supported as the expected first-listen operating path.
