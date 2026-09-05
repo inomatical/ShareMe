@@ -12,3 +12,9 @@ coverage*.xml
 .vs/
 .vscode/
 *.suo
+
+## Android build output
+android/BearShare/.gradle/
+android/BearShare/build/
+android/BearShare/app/build/
+android/BearShare/local.properties

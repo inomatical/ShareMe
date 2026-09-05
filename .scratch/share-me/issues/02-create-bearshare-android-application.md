@@ -4,7 +4,7 @@
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The Android project builds into an installable debug APK.
-- [ ] Baseline automated tests run successfully for the application.
+- [x] The Android project builds into an installable debug APK.
+- [x] Baseline automated tests run successfully for the application.

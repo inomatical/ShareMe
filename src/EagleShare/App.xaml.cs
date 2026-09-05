@@ -9,4 +9,10 @@ namespace EagleShare;
 /// </summary>
 public partial class App : Application
 {
+	protected override void OnStartup(StartupEventArgs e)
+	{
+		EagleShareStorage.CreateDefault().Initialize();
+
+		base.OnStartup(e);
+	}
 }

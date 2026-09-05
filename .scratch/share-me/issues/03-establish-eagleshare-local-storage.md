@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 — Create EagleShare desktop application.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A clean EagleShare start initializes the required Documents storage and metadata without user setup.
-- [ ] Incoming and completed item storage cannot be confused by the inbox experience.
+- [x] A clean EagleShare start initializes the required Documents storage and metadata without user setup.
+- [x] Incoming and completed item storage cannot be confused by the inbox experience.
