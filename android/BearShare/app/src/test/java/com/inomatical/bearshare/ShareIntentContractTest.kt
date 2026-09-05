@@ -62,6 +62,30 @@ class ShareIntentContractTest {
     }
 
     @Test
+    fun acceptsMultipleFileSharesOnlyWhenFilesArePresent() {
+        assertTrue(ShareIntentContract.acceptsMultipleFiles(ShareIntentContract.SendMultipleAction, "*/*", 2))
+        assertFalse(ShareIntentContract.acceptsMultipleFiles(ShareIntentContract.SendMultipleAction, "*/*", 0))
+        assertFalse(ShareIntentContract.acceptsMultipleFiles(ShareIntentContract.SendAction, "*/*", 2))
+    }
+
+    @Test
+    fun sendsFilesSequentiallyAndMarksItemsAfterAFailure() {
+        val items = listOf("first", "second", "third")
+        val attemptedItems = mutableListOf<String>()
+
+        val outcomes = SequentialFileDelivery.send(items, sendItem = { item ->
+            attemptedItems += item
+            if (item == "second") FileDeliveryResult.Failure("EagleShare rejected the file.")
+            else FileDeliveryResult.Success
+        })
+
+        assertEquals(listOf("first", "second"), attemptedItems)
+        assertTrue(outcomes[0].result is FileDeliveryResult.Success)
+        assertTrue(outcomes[1].result is FileDeliveryResult.Failure)
+        assertEquals("Not sent because a previous file failed.", (outcomes[2].result as FileDeliveryResult.Failure).message)
+    }
+
+    @Test
     fun classifiesAbsoluteUrlSharesSeparatelyFromPlainText() {
         assertEquals("url", ShareIntentContract.itemKind("https://example.com/path?query=value#section"))
         assertEquals("text", ShareIntentContract.itemKind("A literal note with a URL: https://example.com"))

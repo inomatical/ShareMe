@@ -6,6 +6,6 @@
 
 **Status:** ready-for-agent
 
-- [ ] Android's multi-file sharing flow offers BearShare for supported selections.
-- [ ] BearShare does not start the next item until the current item returns a successful completion response.
-- [ ] Every item has its own visible completed or failed result.
+- [x] Android's multi-file sharing flow offers BearShare for supported selections.
+- [x] BearShare does not start the next item until the current item returns a successful completion response.
+- [x] Every item has its own visible completed or failed result.

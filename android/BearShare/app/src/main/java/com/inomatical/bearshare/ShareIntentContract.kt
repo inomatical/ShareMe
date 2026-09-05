@@ -26,6 +26,9 @@ internal object ShareIntentContract {
             !mimeType.startsWith("image/") &&
             hasContentStream
 
+    fun acceptsMultipleFiles(action: String?, mimeType: String?, itemCount: Int): Boolean =
+        action == SendMultipleAction && !mimeType.isNullOrBlank() && itemCount > 0
+
     fun itemKind(content: String): String =
         if (runCatching { URI(content).isAbsolute }.getOrDefault(false)) "url" else "text"
 }
