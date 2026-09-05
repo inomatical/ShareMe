@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 
 namespace EagleShare;
 
@@ -12,11 +13,13 @@ namespace EagleShare;
 public partial class MainWindow : Window
 {
     private readonly ObservableCollection<InboxItem> _inboxItems = [];
+    private readonly EagleShareStorage _storage;
     private readonly EagleShareReceiver _receiver;
 
     public MainWindow()
     {
-        _receiver = new EagleShareReceiver();
+        _storage = EagleShareStorage.CreateDefault();
+        _receiver = new EagleShareReceiver(_storage);
         InitializeComponent();
         InboxList.ItemsSource = _inboxItems;
         _receiver.ItemReceived += Receiver_ItemReceived;
@@ -72,8 +75,36 @@ public partial class MainWindow : Window
     private void InboxList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         var selectedItem = InboxList.SelectedItem as InboxItem;
-        PreviewText.Text = selectedItem?.Content ?? string.Empty;
-        CopyButton.IsEnabled = selectedItem is not null;
+        var isImage = selectedItem?.Kind == "image";
+
+        CopyButton.Visibility = isImage ? Visibility.Collapsed : Visibility.Visible;
+        CopyButton.IsEnabled = selectedItem is not null && !isImage;
+        SaveImageButton.Visibility = isImage ? Visibility.Visible : Visibility.Collapsed;
+        SaveImageButton.IsEnabled = isImage;
+        PreviewText.Visibility = isImage ? Visibility.Collapsed : Visibility.Visible;
+        ImagePreview.Visibility = isImage ? Visibility.Visible : Visibility.Collapsed;
+
+        if (!isImage)
+        {
+            PreviewText.Text = selectedItem?.Content ?? string.Empty;
+            ThumbnailImage.Source = null;
+            FullPreviewImage.Source = null;
+            return;
+        }
+
+        try
+        {
+            var imageSource = LoadImage(selectedItem!);
+            ThumbnailImage.Source = imageSource;
+            FullPreviewImage.Source = imageSource;
+        }
+        catch (Exception)
+        {
+            ImagePreview.Visibility = Visibility.Collapsed;
+            PreviewText.Visibility = Visibility.Visible;
+            PreviewText.Text = "The received image preview is unavailable.";
+            SaveImageButton.IsEnabled = false;
+        }
     }
 
     private void CopyButton_Click(object sender, RoutedEventArgs e)
@@ -85,5 +116,52 @@ public partial class MainWindow : Window
 
         Clipboard.SetText(selectedItem.Content);
         StatusText.Text = "Text copied to the clipboard.";
+    }
+
+    private void SaveImageButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (InboxList.SelectedItem is not InboxItem selectedItem || selectedItem.Kind != "image")
+        {
+            return;
+        }
+
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            FileName = selectedItem.OriginalFileName ?? selectedItem.Content,
+            Filter = "Image files|*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.webp;*.tif;*.tiff|All files|*.*",
+            OverwritePrompt = true,
+        };
+
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        try
+        {
+            _storage.CopyImageTo(selectedItem, dialog.FileName, overwrite: true);
+            StatusText.Text = $"Image saved to {dialog.FileName}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text = $"Image could not be saved: {exception.Message}";
+        }
+    }
+
+    private BitmapImage LoadImage(InboxItem item)
+    {
+        if (string.IsNullOrWhiteSpace(item.StoredFileName))
+        {
+            throw new InvalidOperationException("The image has no stored file name.");
+        }
+
+        var imagePath = System.IO.Path.Combine(_storage.InboxPath, item.StoredFileName);
+        var image = new BitmapImage();
+        image.BeginInit();
+        image.UriSource = new System.Uri(imagePath, System.UriKind.Absolute);
+        image.CacheOption = BitmapCacheOption.OnLoad;
+        image.EndInit();
+        image.Freeze();
+        return image;
     }
 }

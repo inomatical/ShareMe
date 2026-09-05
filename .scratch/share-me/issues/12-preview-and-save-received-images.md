@@ -6,5 +6,5 @@
 
 **Status:** ready-for-agent
 
-- [ ] Selected image inbox items display a thumbnail and full preview.
-- [ ] Save As creates a copy at the user-selected location without removing the inbox item.
+- [x] Selected image inbox items display a thumbnail and full preview.
+- [x] Save As creates a copy at the user-selected location without removing the inbox item.

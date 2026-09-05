@@ -143,6 +143,31 @@ public sealed class EagleShareStorage
         }
     }
 
+    public void CopyImageTo(InboxItem item, string destinationPath, bool overwrite = false)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+
+        if (item.Kind != "image" || string.IsNullOrWhiteSpace(item.StoredFileName))
+        {
+            throw new ArgumentException("Only persisted image inbox items can be copied.", nameof(item));
+        }
+
+        var storedFileName = Path.GetFileName(item.StoredFileName);
+        if (!string.Equals(storedFileName, item.StoredFileName, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("The image storage name is invalid.", nameof(item));
+        }
+
+        var sourcePath = Path.Combine(InboxPath, storedFileName);
+        if (!File.Exists(sourcePath))
+        {
+            throw new FileNotFoundException("The received image is no longer available.", sourcePath);
+        }
+
+        File.Copy(sourcePath, destinationPath, overwrite);
+    }
+
     private InboxItem SaveItem(string kind, string content, string extension)
     {
         ArgumentNullException.ThrowIfNull(content);
