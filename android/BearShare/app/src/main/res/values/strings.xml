@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">BearShare</string>
-    <string name="app_ready">BearShare is ready to receive shared content.</string>
+    <string name="target_configuration_title">EagleShare destination</string>
+    <string name="target_configuration_description">Enter the LAN address and port displayed in EagleShare.</string>
+    <string name="target_address_hint">IP address</string>
+    <string name="target_port_hint">Port</string>
+    <string name="save_target">Save destination</string>
+    <string name="target_saved">Destination saved</string>
 </resources>

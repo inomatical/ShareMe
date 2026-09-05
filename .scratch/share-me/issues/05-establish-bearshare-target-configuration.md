@@ -4,8 +4,8 @@
 
 **Blocked by:** 02 — Create BearShare Android application.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A user can enter and edit one EagleShare LAN address and port.
-- [ ] The configured target remains available after BearShare restarts.
-- [ ] Invalid target-address input is clearly rejected before a delivery is attempted.
+- [x] A user can enter and edit one EagleShare LAN address and port.
+- [x] The configured target remains available after BearShare restarts.
+- [x] Invalid target-address input is clearly rejected before a delivery is attempted.
