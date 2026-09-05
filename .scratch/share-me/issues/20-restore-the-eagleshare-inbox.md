@@ -6,6 +6,6 @@
 
 **Status:** ready-for-agent
 
-- [ ] Restarting EagleShare rebuilds the inbox with completed items of every supported kind.
-- [ ] Restored item metadata and stored content remain usable for their type-specific actions.
-- [ ] Partial incoming uploads never appear in the restored inbox.
+- [x] Restarting EagleShare rebuilds the inbox with completed items of every supported kind.
+- [x] Restored item metadata and stored content remain usable for their type-specific actions.
+- [x] Partial incoming uploads never appear in the restored inbox.

@@ -152,6 +152,57 @@ public sealed class EagleShareStorageTests : IDisposable
         Assert.Equal(fileBytes, File.ReadAllBytes(item.LocalPath!));
     }
 
+    [Fact]
+    public void LoadInbox_RestoresCompletedItemsAndExcludesPartialIncomingUploads()
+    {
+        var storage = new EagleShareStorage(_temporaryRoot);
+        var textItem = storage.SaveText("A retained note");
+        var urlItem = storage.SaveUrl("https://example.com/retained");
+        using var image = new MemoryStream([137, 80, 78, 71]);
+        using var file = new MemoryStream([1, 2, 3, 4]);
+        var imageItem = storage.SaveImage("photo.png", "image/png", image);
+        var fileItem = storage.SaveFile("report.pdf", "application/pdf", file);
+        File.WriteAllBytes(Path.Combine(storage.IncomingPath, "interrupted.upload"), [9, 9, 9]);
+
+        var restartedStorage = new EagleShareStorage(_temporaryRoot);
+        var restoredItems = restartedStorage.LoadInbox();
+
+        Assert.Equal(4, restoredItems.Count);
+        Assert.Equal("A retained note", Assert.Single(restoredItems, item => item.Id == textItem.Id).Content);
+        Assert.Equal("https://example.com/retained", Assert.Single(restoredItems, item => item.Id == urlItem.Id).Content);
+        var restoredImage = Assert.Single(restoredItems, item => item.Id == imageItem.Id);
+        Assert.Equal("image/png", restoredImage.MimeType);
+        Assert.True(File.Exists(restoredImage.LocalPath));
+        var restoredFile = Assert.Single(restoredItems, item => item.Id == fileItem.Id);
+        Assert.Equal("application/pdf", restoredFile.MimeType);
+        Assert.Equal(4, restoredFile.Size);
+        Assert.True(File.Exists(restoredFile.LocalPath));
+    }
+
+    [Fact]
+    public void DeleteTextOrUrl_RemovesOnlyTheSelectedItemAndItsDurableRecord()
+    {
+        var storage = new EagleShareStorage(_temporaryRoot);
+        var textItem = storage.SaveText("Delete me");
+        var urlItem = storage.SaveUrl("https://example.com/keep");
+        using var image = new MemoryStream([137, 80, 78, 71]);
+        using var file = new MemoryStream([1, 2, 3, 4]);
+        var imageItem = storage.SaveImage("photo.png", "image/png", image);
+        var fileItem = storage.SaveFile("report.pdf", "application/pdf", file);
+
+        var deleted = storage.DeleteTextOrUrl(textItem);
+
+        Assert.True(deleted);
+        Assert.False(File.Exists(Path.Combine(storage.InboxPath, $"{textItem.Id}.txt")));
+        var restoredItems = storage.LoadInbox();
+        Assert.DoesNotContain(restoredItems, item => item.Id == textItem.Id);
+        Assert.Contains(restoredItems, item => item.Id == urlItem.Id);
+        Assert.Contains(restoredItems, item => item.Id == imageItem.Id);
+        Assert.Contains(restoredItems, item => item.Id == fileItem.Id);
+        Assert.True(File.Exists(imageItem.LocalPath));
+        Assert.True(File.Exists(fileItem.LocalPath));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_temporaryRoot))

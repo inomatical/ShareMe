@@ -35,6 +35,12 @@ public partial class MainWindow : Window
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
+        var restoredItems = _storage.LoadInbox();
+        foreach (var item in restoredItems)
+        {
+            _inboxItems.Add(item);
+        }
+
         var lanAddress = EagleShareReceiver.GetLanAddress();
         AddressText.Text = $"Receiver: http://{lanAddress}:{_receiver.Port} (default port {EagleShareReceiver.DefaultPort})";
 
@@ -78,9 +84,12 @@ public partial class MainWindow : Window
         var isImage = selectedItem?.Kind == "image";
         var isFile = selectedItem?.Kind == "file";
         var isBinaryItem = isImage || isFile;
+        var canDelete = selectedItem?.Kind is "text" or "url";
 
         CopyButton.Visibility = isBinaryItem ? Visibility.Collapsed : Visibility.Visible;
         CopyButton.IsEnabled = selectedItem is not null && !isBinaryItem;
+        DeleteButton.Visibility = canDelete ? Visibility.Visible : Visibility.Collapsed;
+        DeleteButton.IsEnabled = canDelete;
         SaveImageButton.Visibility = isImage ? Visibility.Visible : Visibility.Collapsed;
         SaveImageButton.IsEnabled = isImage;
         SaveFileButton.Visibility = isFile ? Visibility.Visible : Visibility.Collapsed;
@@ -131,6 +140,42 @@ public partial class MainWindow : Window
 
         Clipboard.SetText(selectedItem.Content);
         StatusText.Text = "Text copied to the clipboard.";
+    }
+
+    private void DeleteButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (InboxList.SelectedItem is not InboxItem selectedItem || selectedItem.Kind is not ("text" or "url"))
+        {
+            return;
+        }
+
+        var confirmation = MessageBox.Show(
+            this,
+            $"Delete this {selectedItem.Kind} item from EagleShare?",
+            "Delete inbox item",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            if (_storage.DeleteTextOrUrl(selectedItem))
+            {
+                _inboxItems.Remove(selectedItem);
+                StatusText.Text = $"{selectedItem.Kind} item deleted.";
+            }
+            else
+            {
+                StatusText.Text = "The selected inbox item is no longer available.";
+            }
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text = $"Item could not be deleted: {exception.Message}";
+        }
     }
 
     private void SaveImageButton_Click(object sender, RoutedEventArgs e)

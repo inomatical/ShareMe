@@ -6,6 +6,6 @@
 
 **Status:** ready-for-agent
 
-- [ ] Delete requires explicit confirmation for text and URL items.
-- [ ] Confirmed deletion removes the item from the inbox and durable storage.
-- [ ] Other received items remain intact; EagleShare performs no automatic cleanup.
+- [x] Delete requires explicit confirmation for text and URL items.
+- [x] Confirmed deletion removes the item from the inbox and durable storage.
+- [x] Other received items remain intact; EagleShare performs no automatic cleanup.

@@ -74,6 +74,72 @@ public sealed class EagleShareStorage
         return SaveItem("url", content, ".url");
     }
 
+    public IReadOnlyList<InboxItem> LoadInbox()
+    {
+        lock (_inboxLock)
+        {
+            Initialize();
+            var items = JsonSerializer.Deserialize<List<InboxItem>>(File.ReadAllText(InboxMetadataPath)) ?? [];
+            var restoredItems = new List<InboxItem>();
+
+            foreach (var item in items)
+            {
+                if (!TryGetCompletedContentPath(item, out var contentPath))
+                {
+                    continue;
+                }
+
+                var restoredItem = item.Kind switch
+                {
+                    "text" or "url" => item with
+                    {
+                        Content = File.ReadAllText(contentPath),
+                        LocalPath = contentPath,
+                        Size = new FileInfo(contentPath).Length,
+                    },
+                    "image" or "file" => item with
+                    {
+                        LocalPath = contentPath,
+                        Size = new FileInfo(contentPath).Length,
+                    },
+                    _ => item,
+                };
+                restoredItems.Add(restoredItem);
+            }
+
+            return restoredItems;
+        }
+    }
+
+    public bool DeleteTextOrUrl(InboxItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        if (item.Kind is not ("text" or "url"))
+        {
+            throw new ArgumentException("Only text and URL inbox items can be deleted.", nameof(item));
+        }
+
+        lock (_inboxLock)
+        {
+            Initialize();
+            var items = JsonSerializer.Deserialize<List<InboxItem>>(File.ReadAllText(InboxMetadataPath)) ?? [];
+            var removedCount = items.RemoveAll(storedItem => storedItem.Id == item.Id && storedItem.Kind == item.Kind);
+            if (removedCount != 1)
+            {
+                return false;
+            }
+
+            if (!TryGetCompletedContentPath(item, out var contentPath))
+            {
+                throw new InvalidOperationException("The inbox item's stored record is invalid.");
+            }
+
+            File.Delete(contentPath);
+            WriteDurableFile(InboxMetadataPath, JsonSerializer.SerializeToUtf8Bytes(items));
+            return true;
+        }
+    }
+
     public InboxItem SaveImage(
         string originalFileName,
         string? mimeType,
@@ -222,6 +288,26 @@ public sealed class EagleShareStorage
         var items = JsonSerializer.Deserialize<List<InboxItem>>(File.ReadAllText(InboxMetadataPath)) ?? [];
         items.Add(item);
         WriteDurableFile(InboxMetadataPath, JsonSerializer.SerializeToUtf8Bytes(items));
+    }
+
+    private bool TryGetCompletedContentPath(InboxItem item, out string contentPath)
+    {
+        var fileName = item.Kind switch
+        {
+            "text" => $"{item.Id}.txt",
+            "url" => $"{item.Id}.url",
+            "image" or "file" => item.StoredFileName,
+            _ => null,
+        };
+
+        if (string.IsNullOrWhiteSpace(fileName) || !string.Equals(fileName, Path.GetFileName(fileName), StringComparison.Ordinal))
+        {
+            contentPath = string.Empty;
+            return false;
+        }
+
+        contentPath = Path.Combine(InboxPath, fileName);
+        return File.Exists(contentPath);
     }
 
     private static void WriteDurableFile(string path, byte[] content)

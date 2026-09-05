@@ -63,6 +63,15 @@
                         HorizontalAlignment="Right"
                         IsEnabled="False"
                         Click="CopyButton_Click"/>
+                    <Button x:Name="DeleteButton"
+                        DockPanel.Dock="Bottom"
+                        Content="Delete"
+                        Margin="0,8,8,0"
+                        Padding="12,6"
+                        HorizontalAlignment="Right"
+                        Visibility="Collapsed"
+                        IsEnabled="False"
+                        Click="DeleteButton_Click"/>
                 <Button x:Name="SaveImageButton"
                         DockPanel.Dock="Bottom"
                         Content="Save As..."
