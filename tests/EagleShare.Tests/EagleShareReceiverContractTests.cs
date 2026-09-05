@@ -35,6 +35,44 @@ public sealed class EagleShareReceiverContractTests
     }
 
     [Fact]
+    public async Task MalformedMultipartPost_ReturnsClearClientError()
+    {
+        await using var harness = await EagleShareReceiverContractHarness.StartAsync();
+
+        var response = await harness.PostMalformedFormAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("malformed", response.Body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task MultipartPost_WhenStorageIsUnavailable_ReturnsClearServerError()
+    {
+        var storageRootPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        File.WriteAllText(storageRootPath, "not a directory");
+        var receiver = new EagleShareReceiver(new EagleShareStorage(storageRootPath), GetAvailablePort());
+        await receiver.StartAsync();
+        using var client = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{receiver.Port}/") };
+        using var form = new MultipartFormDataContent();
+        form.Add(new StringContent("text", Encoding.UTF8), "kind");
+        form.Add(new StringContent("Could not be stored", Encoding.UTF8), "content");
+
+        try
+        {
+            using var response = await client.PostAsync("api/items", form);
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+            Assert.Contains("could not be persisted", responseBody, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            await receiver.DisposeAsync();
+            File.Delete(storageRootPath);
+        }
+    }
+
+    [Fact]
     public async Task MultipartPost_ToItemsEndpoint_ReturnsSuccessAfterTextIsDurable()
     {
         await using var harness = await EagleShareReceiverContractHarness.StartAsync();
@@ -102,6 +140,24 @@ public sealed class EagleShareReceiverContractTests
         Assert.Equal(fileBytes, File.ReadAllBytes(item.LocalPath!));
         Assert.Empty(Directory.EnumerateFiles(harness.Storage.IncomingPath));
     }
+
+    [Fact]
+    public async Task Receiver_AfterStopping_RejectsNewRequests()
+    {
+        var receiver = new EagleShareReceiver(GetAvailablePort());
+        await receiver.StartAsync();
+        await receiver.StopAsync();
+        using var client = new HttpClient();
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => client.GetAsync($"http://127.0.0.1:{receiver.Port}/"));
+    }
+
+    private static int GetAvailablePort()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, port: 0);
+        listener.Start();
+        return ((IPEndPoint)listener.LocalEndpoint).Port;
+    }
 }
 
 internal sealed class EagleShareReceiverContractHarness : IAsyncDisposable
@@ -149,6 +205,13 @@ internal sealed class EagleShareReceiverContractHarness : IAsyncDisposable
         form.Add(new StringContent(content, Encoding.UTF8), "content");
 
         using var response = await _client.PostAsync("api/items", form);
+        return new TransferHttpResponse(response.StatusCode, await response.Content.ReadAsStringAsync());
+    }
+
+    public async Task<TransferHttpResponse> PostMalformedFormAsync()
+    {
+        using var content = new StringContent("this is not a multipart form", Encoding.UTF8, "multipart/form-data");
+        using var response = await _client.PostAsync("api/items", content);
         return new TransferHttpResponse(response.StatusCode, await response.Content.ReadAsStringAsync());
     }
 

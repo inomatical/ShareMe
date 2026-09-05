@@ -228,11 +228,40 @@ public sealed class EagleShareStorageTests : IDisposable
         Assert.Contains(restoredItems, item => item.Id == urlItem.Id);
     }
 
+    [Fact]
+    public void SaveImage_WhenContentReadFails_DoesNotExposePartialContentOrMetadata()
+    {
+        var storage = new EagleShareStorage(_temporaryRoot);
+        using var content = new FailingReadStream([137, 80, 78, 71]);
+
+        Assert.Throws<IOException>(() => storage.SaveImage("interrupted.png", "image/png", content));
+
+        Assert.Empty(Directory.EnumerateFiles(storage.IncomingPath));
+        Assert.Empty(Directory.EnumerateFiles(storage.InboxPath));
+        Assert.Empty(storage.LoadInbox());
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_temporaryRoot))
         {
             Directory.Delete(_temporaryRoot, recursive: true);
+        }
+    }
+
+    private sealed class FailingReadStream(byte[] content) : MemoryStream(content)
+    {
+        private bool _hasRead;
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            if (_hasRead)
+            {
+                throw new IOException("The upload was interrupted.");
+            }
+
+            _hasRead = true;
+            return base.Read(buffer, offset, 1);
         }
     }
 }

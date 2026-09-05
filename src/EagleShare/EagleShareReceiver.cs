@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -61,50 +62,72 @@ public sealed class EagleShareReceiver : IAsyncDisposable
                 return Results.BadRequest("A multipart form is required.");
             }
 
-            var form = await request.ReadFormAsync(cancellationToken);
+            IFormCollection form;
+            try
+            {
+                form = await request.ReadFormAsync(cancellationToken);
+            }
+            catch (BadHttpRequestException)
+            {
+                return Results.BadRequest("The multipart form is malformed.");
+            }
+            catch (InvalidDataException)
+            {
+                return Results.BadRequest("The multipart form is malformed.");
+            }
+
             var kind = form["kind"].ToString();
-            InboxItem? item;
-            if (kind == "image" && form["content"].Count == 0 && form.Files.Count == 1 && form.Files[0].ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            try
             {
-                var image = form.Files[0];
-                using var imageStream = image.OpenReadStream();
-                item = _storage.SaveImage(
-                    image.FileName,
-                    image.ContentType,
-                    imageStream,
-                    bytesReceived => ImageProgress?.Invoke(this, new IncomingTransferProgress(bytesReceived, image.Length)));
-            }
-            else if (kind == "file" && form["content"].Count == 0 && form.Files.Count == 1)
-            {
-                var file = form.Files[0];
-                using var fileStream = file.OpenReadStream();
-                item = _storage.SaveFile(
-                    file.FileName,
-                    string.IsNullOrWhiteSpace(file.ContentType) ? null : file.ContentType,
-                    fileStream);
-            }
-            else if (form["content"].Count == 1)
-            {
-                var content = form["content"].ToString();
-                item = kind switch
+                InboxItem? item;
+                if (kind == "image" && form["content"].Count == 0 && form.Files.Count == 1 && form.Files[0].ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
                 {
-                    "text" => _storage.SaveText(content),
-                    "url" when Uri.TryCreate(content, UriKind.Absolute, out _) => _storage.SaveUrl(content),
-                    _ => null,
-                };
-            }
-            else
-            {
-                item = null;
-            }
+                    var image = form.Files[0];
+                    using var imageStream = image.OpenReadStream();
+                    item = _storage.SaveImage(
+                        image.FileName,
+                        image.ContentType,
+                        imageStream,
+                        bytesReceived => ImageProgress?.Invoke(this, new IncomingTransferProgress(bytesReceived, image.Length)));
+                }
+                else if (kind == "file" && form["content"].Count == 0 && form.Files.Count == 1)
+                {
+                    var file = form.Files[0];
+                    using var fileStream = file.OpenReadStream();
+                    item = _storage.SaveFile(
+                        file.FileName,
+                        string.IsNullOrWhiteSpace(file.ContentType) ? null : file.ContentType,
+                        fileStream);
+                }
+                else if (form["content"].Count == 1)
+                {
+                    var content = form["content"].ToString();
+                    item = kind switch
+                    {
+                        "text" => _storage.SaveText(content),
+                        "url" when Uri.TryCreate(content, UriKind.Absolute, out _) => _storage.SaveUrl(content),
+                        _ => null,
+                    };
+                }
+                else
+                {
+                    item = null;
+                }
 
-            if (item is null)
-            {
-                return Results.BadRequest("A valid text, absolute URL, image, or single file is required.");
-            }
+                if (item is null)
+                {
+                    return Results.BadRequest("A valid text, absolute URL, image, or single file is required.");
+                }
 
-            ItemReceived?.Invoke(this, item);
-            return Results.Created($"/api/items/{item.Id}", item);
+                ItemReceived?.Invoke(this, item);
+                return Results.Created($"/api/items/{item.Id}", item);
+            }
+            catch (Exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                return Results.Problem(
+                    "The received item could not be persisted.",
+                    statusCode: StatusCodes.Status500InternalServerError);
+            }
         });
         application.MapFallback(() => Results.NotFound());
 
