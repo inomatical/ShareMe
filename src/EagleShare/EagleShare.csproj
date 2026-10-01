@@ -5,6 +5,7 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <RootNamespace>EagleShare</RootNamespace>
     <AssemblyName>EagleShare</AssemblyName>
+    <ApplicationIcon>Assets\EagleShare.ico</ApplicationIcon>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
@@ -13,6 +14,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Resource Include="Assets\EagleShare.ico" />
   </ItemGroup>
 
 </Project>
