@@ -18,3 +18,4 @@ android/BearShare/.gradle/
 android/BearShare/build/
 android/BearShare/app/build/
 android/BearShare/local.properties
+/android/BearShare/.idea/caches/deviceStreaming.xml

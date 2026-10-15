@@ -169,7 +169,9 @@ public sealed class EagleShareReceiver : IAsyncDisposable
                 networkInterface.NetworkInterfaceType != NetworkInterfaceType.Loopback)
             .SelectMany(networkInterface => networkInterface.GetIPProperties().UnicastAddresses)
             .Select(unicastAddress => unicastAddress.Address)
-            .FirstOrDefault(address => address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(address));
+            .Where(address => address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(address))
+            .Where(address => address.ToString().StartsWith("192.168."))
+            .FirstOrDefault();
 
         return networkAddress ?? IPAddress.Loopback;
     }

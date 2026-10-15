@@ -27,9 +27,9 @@ public partial class MainWindow : Window
         Loaded += MainWindow_Loaded;
     }
 
-    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    protected override async void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
-        _receiver.StopAsync().GetAwaiter().GetResult();
+        await _receiver.StopAsync();
         base.OnClosing(e);
     }
 
